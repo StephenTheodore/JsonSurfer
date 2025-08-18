@@ -2,6 +2,8 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using JsonSurfer.Core.Interfaces;
 using JsonSurfer.Core.Models;
+using CommunityToolkit.Mvvm.Messaging;
+using JsonSurfer.App.Messages;
 using Microsoft.Win32;
 using System.IO;
 using System.Windows;
@@ -31,6 +33,9 @@ public partial class MainViewModel : ObservableObject
 
     [ObservableProperty]
     private string _windowTitle = "JsonSurfer - JSON Editor";
+
+    [ObservableProperty]
+    private int _selectedTabIndex;
 
     public MainViewModel(IJsonParserService jsonParserService, IValidationService validationService, IFileService fileService)
     {
@@ -79,28 +84,13 @@ public partial class MainViewModel : ObservableObject
 
             if (string.IsNullOrEmpty(filePath))
             {
-                var saveFileDialog = new SaveFileDialog
-                {
-                    Title = "Save JSON File",
-                    Filter = "JSON Files (*.json)|*.json|Info Files (*.info)|*.info|All Files (*.*)|*.*",
-                    DefaultExt = "json"
-                };
-
-                if (saveFileDialog.ShowDialog() == true)
-                {
-                    filePath = saveFileDialog.FileName;
-                }
-                else
-                {
-                    return; // User cancelled
-                }
+                await SaveAsFileAsync();
+                return;
             }
 
             var success = await _fileService.WriteFileAsync(filePath, JsonContent);
             if (success)
             {
-                CurrentFilePath = filePath;
-                WindowTitle = $"JsonSurfer - {Path.GetFileName(filePath)}";
                 IsModified = false;
                 MessageBox.Show("File saved successfully!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
             }
@@ -112,6 +102,41 @@ public partial class MainViewModel : ObservableObject
         catch (Exception ex)
         {
             MessageBox.Show($"Failed to save file: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    [RelayCommand]
+    private async Task SaveAsFileAsync()
+    {
+        try
+        {
+            var saveFileDialog = new SaveFileDialog
+            {
+                Title = "Save JSON File As",
+                Filter = "JSON Files (*.json)|*.json|Info Files (*.info)|*.info|All Files (*.*)|*.*",
+                DefaultExt = "json",
+                FileName = string.IsNullOrEmpty(CurrentFilePath) ? "untitled.json" : Path.GetFileName(CurrentFilePath)
+            };
+
+            if (saveFileDialog.ShowDialog() == true)
+            {
+                var success = await _fileService.WriteFileAsync(saveFileDialog.FileName, JsonContent);
+                if (success)
+                {
+                    CurrentFilePath = saveFileDialog.FileName;
+                    WindowTitle = $"JsonSurfer - {Path.GetFileName(saveFileDialog.FileName)}";
+                    IsModified = false;
+                    MessageBox.Show("File saved successfully!", "Success", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+                else
+                {
+                    MessageBox.Show("Failed to save file.", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Failed to save file as: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
         }
     }
 
@@ -146,12 +171,33 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
-    // Automatically mark as modified when content changes
+    // Automatically mark as modified when content changes and validate
     partial void OnJsonContentChanged(string value)
     {
         if (!string.IsNullOrEmpty(CurrentFilePath))
         {
             IsModified = true;
+        }
+        
+        // Auto-validate on content change
+        ValidateJson();
+    }
+
+    // Handle tab changes through property change notification
+    partial void OnSelectedTabIndexChanged(int value)
+    {
+        System.Diagnostics.Debug.WriteLine($"Tab changed to index: {value}");
+        
+        // 0 = Code Editor, 1 = Visual Editor
+        if (value == 0) // Code Editor selected
+        {
+            System.Diagnostics.Debug.WriteLine("Switching to Code Editor - UpdateTextFromVisuals");
+            UpdateTextFromVisuals();
+        }
+        else if (value == 1) // Visual Editor selected  
+        {
+            System.Diagnostics.Debug.WriteLine("Switching to Visual Editor - UpdateVisualsFromText");
+            UpdateVisualsFromText();
         }
     }
 }

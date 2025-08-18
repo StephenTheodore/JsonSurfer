@@ -12,7 +12,7 @@
                            FontSize="12"
                            ShowLineNumbers="True"
                            WordWrap="False"
-                           SyntaxHighlighting="JSON"
+                           SyntaxHighlighting="Json"
                            VerticalScrollBarVisibility="Auto"
                            HorizontalScrollBarVisibility="Auto">
             <avalon:TextEditor.Options>
