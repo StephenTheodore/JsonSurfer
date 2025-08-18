@@ -4,17 +4,23 @@ using JsonSurfer.App.ViewModels;
 using ICSharpCode.AvalonEdit.Folding;
 using System.Text.Json;
 using JsonSurfer.App.Helpers;
+using ICSharpCode.AvalonEdit.Rendering;
+using System.Windows.Media;
+using CommunityToolkit.Mvvm.Messaging;
+using JsonSurfer.App.Messages;
 
 namespace JsonSurfer.App.Views.Controls;
 
-public partial class JsonCodeEditor : UserControl
+public partial class JsonCodeEditor : UserControl, IRecipient<JsonErrorOccurredMessage>
 {
     private FoldingManager? _foldingManager;
+    private TextMarkerService? _textMarkerService;
     
     public JsonCodeEditor()
     {
         InitializeComponent();
         Loaded += OnLoaded;
+        Unloaded += OnUnloaded; // Added for message unregistration
         SetupContextMenu();
     }
 
@@ -25,19 +31,32 @@ public partial class JsonCodeEditor : UserControl
         {
             _foldingManager = FoldingManager.Install(JsonTextEditor.TextArea);
         }
-        
-        // Find MainViewModel in the DataContext chain
-        var mainWindow = Window.GetWindow(this);
-        if (mainWindow?.DataContext is MainViewModel viewModel)
-        {
-            // Bind JsonContent to AvalonEdit
-            JsonTextEditor.Text = viewModel.JsonContent;
 
-            // Two-way binding setup
+        // Setup text marker service for error highlighting
+        if (_textMarkerService == null)
+        {
+            _textMarkerService = new TextMarkerService(JsonTextEditor.Document);
+            JsonTextEditor.TextArea.TextView.BackgroundRenderers.Add(_textMarkerService);
+        }
+
+        // Register for messages
+        WeakReferenceMessenger.Default.Register(this);
+        
+        // Setup data binding through DataContext
+        SetupDataBinding();
+    }
+
+    private void SetupDataBinding()
+    {
+        // Wait for DataContext to be set
+        if (DataContext is MainViewModel viewModel)
+        {
+            // Clear any existing error highlighting when content changes
             viewModel.PropertyChanged += (s, e) =>
             {
                 if (e.PropertyName == nameof(MainViewModel.JsonContent))
                 {
+                    ClearErrorHighlighting();
                     if (JsonTextEditor.Text != viewModel.JsonContent)
                     {
                         JsonTextEditor.Text = viewModel.JsonContent;
@@ -45,6 +64,9 @@ public partial class JsonCodeEditor : UserControl
                     }
                 }
             };
+
+            // Bind JsonContent to AvalonEdit
+            JsonTextEditor.Text = viewModel.JsonContent;
 
             JsonTextEditor.TextChanged += (s, e) =>
             {
@@ -56,6 +78,20 @@ public partial class JsonCodeEditor : UserControl
             };
             
             UpdateFolding();
+        }
+        else
+        {
+            // If DataContext is not set yet, wait for it
+            DataContextChanged += OnDataContextChanged;
+        }
+    }
+
+    private void OnDataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
+    {
+        if (e.NewValue is MainViewModel)
+        {
+            DataContextChanged -= OnDataContextChanged;
+            SetupDataBinding();
         }
     }
 
@@ -70,6 +106,16 @@ public partial class JsonCodeEditor : UserControl
         var validateItem = new MenuItem { Header = "Validate JSON" };
         validateItem.Click += ValidateJson_Click;
         contextMenu.Items.Add(validateItem);
+        
+        contextMenu.Items.Add(new Separator());
+        
+        var saveItem = new MenuItem { Header = "Save" };
+        saveItem.Click += Save_Click;
+        contextMenu.Items.Add(saveItem);
+        
+        var saveAsItem = new MenuItem { Header = "Save As..." };
+        saveAsItem.Click += SaveAs_Click;
+        contextMenu.Items.Add(saveAsItem);
         
         JsonTextEditor.ContextMenu = contextMenu;
     }
@@ -137,6 +183,12 @@ public partial class JsonCodeEditor : UserControl
             
             // Update folding after formatting
             UpdateFolding();
+            
+            // Auto-validate after formatting
+            if (DataContext is MainViewModel viewModel)
+            {
+                viewModel.ValidateJsonCommand.Execute(null);
+            }
         }
         catch (JsonException ex)
         {
@@ -147,25 +199,44 @@ public partial class JsonCodeEditor : UserControl
             if (result == MessageBoxResult.Yes)
             {
                 GoToLine(GetLineNumberFromException(ex, JsonTextEditor.Text));
+                HighlightError(GetLineNumberFromException(ex, JsonTextEditor.Text), (int)(ex.BytePositionInLine.GetValueOrDefault() + 1), ex.Message);
             }
         }
         catch (Exception ex)
         {
             MessageBox.Show($"Error formatting JSON: {ex.Message}", "Format Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            ClearErrorHighlighting(); // Clear highlights on general error
         }
     }
 
     private void ValidateJson_Click(object sender, RoutedEventArgs e)
     {
-        var mainWindow = Window.GetWindow(this);
-        if (mainWindow?.DataContext is MainViewModel viewModel)
+        if (DataContext is MainViewModel viewModel)
         {
             viewModel.ValidateJsonCommand.Execute(null);
         }
     }
 
+    private void Save_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is MainViewModel viewModel)
+        {
+            viewModel.SaveFileCommand.Execute(null);
+        }
+    }
+
+    private void SaveAs_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is MainViewModel viewModel)
+        {
+            viewModel.SaveAsFileCommand.Execute(null);
+        }
+    }
+
     public void GoToLine(int lineNumber)
     {
+        ClearErrorHighlighting(); // Clear previous highlights
+
         if (lineNumber < 1) return;
 
         var line = JsonTextEditor.Document.GetLineByNumber(Math.Min(lineNumber, JsonTextEditor.Document.LineCount));
@@ -179,30 +250,56 @@ public partial class JsonCodeEditor : UserControl
 
     private int GetLineNumberFromException(JsonException ex, string jsonContent)
     {
-        // Try to extract line number from exception
-        var match = System.Text.RegularExpressions.Regex.Match(ex.Message, @"line (\d+)", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-        if (match.Success && int.TryParse(match.Groups[1].Value, out int line))
-        {
-            return line;
-        }
+        // Use the improved method from JsonErrorHelper
+        return JsonErrorHelper.GetLineNumberFromException(ex, jsonContent);
+    }
 
-        // If no line number in exception, try to find position-based line
-        if (ex.BytePositionInLine.HasValue)
+    public void HighlightError(int lineNumber, int column, string message)
+    {
+        ClearErrorHighlighting();
+
+        if (_textMarkerService != null && lineNumber >= 1 && lineNumber <= JsonTextEditor.Document.LineCount)
         {
-            var position = ex.BytePositionInLine.Value;
-            var lines = jsonContent.Split('\n');
-            var currentPos = 0;
-            
-            for (int i = 0; i < lines.Length; i++)
+            var line = JsonTextEditor.Document.GetLineByNumber(lineNumber);
+            var startOffset = line.Offset + column - 1; // column is 1-based
+            var length = Math.Min(5, line.Length - (column - 1)); // Highlight a small segment
+
+            if (startOffset < line.EndOffset)
             {
-                currentPos += lines[i].Length + 1; // +1 for newline
-                if (currentPos >= position)
-                {
-                    return i + 1;
-                }
+                var marker = _textMarkerService.Create(startOffset, length);
+                marker.BackgroundColor = Colors.Red;
+                marker.ForegroundColor = Colors.White;
+                marker.ToolTip = message;
+                JsonTextEditor.TextArea.TextView.Redraw(); // Redraw to show the marker
             }
         }
+    }
 
-        return 1; // Default to line 1 if can't determine
+    public void ClearErrorHighlighting()
+    {
+        _textMarkerService?.RemoveAll(m => true);
+        JsonTextEditor.TextArea.TextView.Redraw(); // Redraw to clear markers
+    }
+
+    private void OnUnloaded(object sender, RoutedEventArgs e)
+    {
+        WeakReferenceMessenger.Default.UnregisterAll(this);
+    }
+
+    public void Receive(JsonErrorOccurredMessage message)
+    {
+        // Switch to Code Editor tab first
+        if (DataContext is MainViewModel viewModel)
+        {
+            viewModel.SelectedTabIndex = 0; // Code Editor is index 0
+        }
+
+        // Navigate to the error line
+        GoToLine(message.Value.Line);
+        
+        // Highlight the error
+        HighlightError(message.Value.Line,
+                       message.Value.Column,
+                       message.Value.Message);
     }
 }

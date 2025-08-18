@@ -67,33 +67,64 @@ public static class JsonErrorHelper
                $"상세오류: {message}";
     }
 
+    public static int GetLineNumberFromException(JsonException ex, string jsonContent)
+    {
+        return GetLineNumber(ex, jsonContent);
+    }
+
     private static int GetLineNumber(JsonException ex, string jsonContent)
     {
-        // Try to extract line number from exception
-        var match = Regex.Match(ex.Message, @"line (\d+)", RegexOptions.IgnoreCase);
-        if (match.Success && int.TryParse(match.Groups[1].Value, out int line))
+        // Try to extract line number from exception message first
+        var lineMatch = Regex.Match(ex.Message, @"line (\d+)", RegexOptions.IgnoreCase);
+        if (lineMatch.Success && int.TryParse(lineMatch.Groups[1].Value, out int lineFromMessage))
         {
-            return line;
+            return lineFromMessage;
         }
 
-        // If no line number in exception, try to find position-based line
+        // Try position-based calculation using LinePosition property if available
+        if (ex.LineNumber.HasValue)
+        {
+            return (int)ex.LineNumber.Value + 1; // LineNumber is 0-based
+        }
+
+        // Fallback to BytePositionInLine calculation with improved accuracy
         if (ex.BytePositionInLine.HasValue)
         {
-            var position = ex.BytePositionInLine.Value;
-            var lines = jsonContent.Split('\n');
-            var currentPos = 0;
-            
-            for (int i = 0; i < lines.Length; i++)
-            {
-                currentPos += lines[i].Length + 1; // +1 for newline
-                if (currentPos >= position)
-                {
-                    return i + 1;
-                }
-            }
+            return CalculateLineFromBytePosition(ex.BytePositionInLine.Value, jsonContent);
+        }
+
+        // Last resort: try to parse position from the entire exception message
+        var posMatch = Regex.Match(ex.Message, @"position (\d+)", RegexOptions.IgnoreCase);
+        if (posMatch.Success && int.TryParse(posMatch.Groups[1].Value, out int position))
+        {
+            return CalculateLineFromBytePosition(position, jsonContent);
         }
 
         return 1; // Default to line 1 if can't determine
+    }
+
+    private static int CalculateLineFromBytePosition(long bytePosition, string jsonContent)
+    {
+        if (string.IsNullOrEmpty(jsonContent) || bytePosition < 0)
+            return 1;
+
+        // Convert string to bytes using UTF-8 encoding (same as System.Text.Json)
+        var bytes = System.Text.Encoding.UTF8.GetBytes(jsonContent);
+        
+        if (bytePosition >= bytes.Length)
+            return jsonContent.Split('\n').Length; // Return last line if position exceeds content
+
+        // Count newlines up to the byte position
+        int lineNumber = 1;
+        for (int i = 0; i < Math.Min(bytePosition, bytes.Length); i++)
+        {
+            if (bytes[i] == 0x0A) // '\n' in UTF-8
+            {
+                lineNumber++;
+            }
+        }
+
+        return lineNumber;
     }
 
     private static string? GetLineContent(string jsonContent, int lineNumber)
