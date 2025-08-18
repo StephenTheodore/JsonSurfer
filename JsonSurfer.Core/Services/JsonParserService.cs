@@ -1,3 +1,5 @@
+using System.Text;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using JsonSurfer.Core.Interfaces;
 using JsonSurfer.Core.Models;
@@ -21,8 +23,71 @@ public class JsonParserService : IJsonParserService
 
     public string SerializeFromTree(JsonNode rootNode)
     {
-        // TODO: Implement tree to JSON serialization
-        throw new NotImplementedException();
+        using (var stream = new MemoryStream())
+        {
+            using (var writer = new Utf8JsonWriter(stream, new JsonWriterOptions { Indented = true, Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping }))
+            {
+                WriteNode(writer, rootNode);
+            }
+            return Encoding.UTF8.GetString(stream.ToArray());
+        }
+    }
+
+    private void WriteNode(Utf8JsonWriter writer, JsonNode node)
+    {
+        switch (node.Type)
+        {
+            case JsonNodeType.Object:
+                writer.WriteStartObject();
+                foreach (var child in node.Children)
+                {
+                    writer.WritePropertyName(child.Key);
+                    WriteNode(writer, child);
+                }
+                writer.WriteEndObject();
+                break;
+
+            case JsonNodeType.Array:
+                writer.WriteStartArray();
+                foreach (var child in node.Children)
+                {
+                    WriteNode(writer, child);
+                }
+                writer.WriteEndArray();
+                break;
+
+            case JsonNodeType.String:
+                writer.WriteStringValue(node.Value?.ToString());
+                break;
+
+            case JsonNodeType.Number:
+                if (node.Value is int intValue)
+                    writer.WriteNumberValue(intValue);
+                else if (node.Value is long longValue)
+                    writer.WriteNumberValue(longValue);
+                else if (node.Value is double doubleValue)
+                    writer.WriteNumberValue(doubleValue);
+                else if (node.Value is decimal decimalValue)
+                    writer.WriteNumberValue(decimalValue);
+                else
+                    writer.WriteStringValue(node.Value?.ToString()); // Fallback for unknown number types
+                break;
+
+            case JsonNodeType.Boolean:
+                if (node.Value is bool boolValue)
+                    writer.WriteBooleanValue(boolValue);
+                else
+                    writer.WriteStringValue(node.Value?.ToString()); // Fallback
+                break;
+
+            case JsonNodeType.Null:
+                writer.WriteNullValue();
+                break;
+
+            default:
+                // Handle unknown type or throw exception
+                break;
+        }
     }
 
     public ValidationResult ValidateJson(string jsonContent)
@@ -40,6 +105,8 @@ public class JsonParserService : IJsonParserService
             result.Errors.Add(new ValidationError
             {
                 Message = ex.Message,
+                Line = (int)ex.LineNumber.GetValueOrDefault(),
+                Column = (int)ex.BytePositionInLine.GetValueOrDefault() + 1, // Convert 0-based byte position to 1-based column
                 Type = ErrorType.SyntaxError
             });
         }
