@@ -7,7 +7,7 @@
              mc:Ignorable="d"
              d:DesignHeight="450" d:DesignWidth="800">
     <Grid>
-        <TreeView x:Name="JsonTree" ItemsSource="{Binding RootNode.Children}" SelectedItemChanged="JsonTree_SelectedItemChanged">
+        <TreeView x:Name="JsonTree" ItemsSource="{Binding RootNode.Children, FallbackValue={x:Null}}" SelectedItemChanged="JsonTree_SelectedItemChanged">
             <TreeView.ItemTemplate>
                 <HierarchicalDataTemplate DataType="{x:Type models:JsonNode}" ItemsSource="{Binding Children}">
                     <StackPanel Orientation="Horizontal">

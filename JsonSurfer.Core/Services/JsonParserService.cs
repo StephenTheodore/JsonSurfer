@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Encodings.Web;
 using System.Text.Json;
 using JsonSurfer.Core.Interfaces;
 using JsonSurfer.Core.Models;
@@ -24,7 +25,7 @@ public class JsonParserService : IJsonParserService
     {
         using (var stream = new MemoryStream())
         {
-            using (var writer = new Utf8JsonWriter(stream, new JsonWriterOptions { Indented = true }))
+            using (var writer = new Utf8JsonWriter(stream, new JsonWriterOptions { Indented = true, Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping }))
             {
                 WriteNode(writer, rootNode);
             }
@@ -104,6 +105,8 @@ public class JsonParserService : IJsonParserService
             result.Errors.Add(new ValidationError
             {
                 Message = ex.Message,
+                Line = (int)ex.LineNumber.GetValueOrDefault(),
+                Column = (int)ex.BytePositionInLine.GetValueOrDefault() + 1, // Convert 0-based byte position to 1-based column
                 Type = ErrorType.SyntaxError
             });
         }
