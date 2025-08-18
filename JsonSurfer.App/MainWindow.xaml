@@ -39,6 +39,10 @@
 
         <!-- Main Content -->
         <TabControl Grid.Row="1" Margin="5">
+            <TabItem Header="Code Editor">
+                <controls:JsonCodeEditor/>
+            </TabItem>
+            
             <TabItem Header="Visual Editor">
                 <Grid>
                     <Grid.ColumnDefinitions>
@@ -57,10 +61,6 @@
                     </Grid>
                 </Grid>
             </TabItem>
-            
-            <TabItem Header="Code Editor">
-                <controls:JsonCodeEditor/>
-            </TabItem>
         </TabControl>
 
         <!-- Status Bar -->
@@ -71,8 +71,13 @@
             <StatusBarItem>
                 <TextBlock Text="{Binding IsModified, StringFormat='Modified: {0}'}"/>
             </StatusBarItem>
+            <StatusBarItem>
+                <TextBlock Text="{Binding ValidationResult.Errors.Count, StringFormat='Errors: {0}', FallbackValue='Errors: 0'}"
+                           Foreground="Red"/>
+            </StatusBarItem>
             <StatusBarItem HorizontalAlignment="Right">
-                <TextBlock Text="{Binding ValidationResult.Errors.Count, StringFormat='Errors: {0}', FallbackValue='Errors: 0'}"/>
+                <TextBlock Text="{Binding ValidationResult.Warnings.Count, StringFormat='Warnings: {0}', FallbackValue='Warnings: 0'}"
+                           Foreground="Orange"/>
             </StatusBarItem>
         </StatusBar>
     </Grid>
