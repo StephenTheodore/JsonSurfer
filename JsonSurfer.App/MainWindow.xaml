@@ -6,7 +6,15 @@
         xmlns:local="clr-namespace:JsonSurfer.App"
         xmlns:controls="clr-namespace:JsonSurfer.App.Views.Controls"
         mc:Ignorable="d"
-        Title="JsonSurfer - JSON Editor" Height="600" Width="1000">
+        Title="{Binding WindowTitle}" Height="600" Width="1000">
+    
+    <!-- Keyboard Shortcuts -->
+    <Window.InputBindings>
+        <KeyBinding Command="{Binding OpenFileCommand}" Key="O" Modifiers="Ctrl"/>
+        <KeyBinding Command="{Binding SaveFileCommand}" Key="S" Modifiers="Ctrl"/>
+        <KeyBinding Command="{Binding ValidateJsonCommand}" Key="F5"/>
+    </Window.InputBindings>
+    
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
@@ -18,13 +26,13 @@
         <DockPanel Grid.Row="0">
             <Menu DockPanel.Dock="Top">
                 <MenuItem Header="_File">
-                    <MenuItem Header="_Open" Command="{Binding OpenFileCommand}"/>
-                    <MenuItem Header="_Save" Command="{Binding SaveFileCommand}"/>
+                    <MenuItem Header="_Open" Command="{Binding OpenFileCommand}" InputGestureText="Ctrl+O"/>
+                    <MenuItem Header="_Save" Command="{Binding SaveFileCommand}" InputGestureText="Ctrl+S"/>
                     <Separator/>
-                    <MenuItem Header="E_xit"/>
+                    <MenuItem Header="E_xit" Command="{Binding ExitCommand}" InputGestureText="Alt+F4"/>
                 </MenuItem>
                 <MenuItem Header="_Edit">
-                    <MenuItem Header="_Validate" Command="{Binding ValidateJsonCommand}"/>
+                    <MenuItem Header="_Validate" Command="{Binding ValidateJsonCommand}" InputGestureText="F5"/>
                 </MenuItem>
             </Menu>
         </DockPanel>
@@ -60,8 +68,11 @@
             <StatusBarItem>
                 <TextBlock Text="Ready"/>
             </StatusBarItem>
+            <StatusBarItem>
+                <TextBlock Text="{Binding IsModified, StringFormat='Modified: {0}'}"/>
+            </StatusBarItem>
             <StatusBarItem HorizontalAlignment="Right">
-                <TextBlock Text="{Binding ValidationResult.Errors.Count, StringFormat='Errors: {0}'}"/>
+                <TextBlock Text="{Binding ValidationResult.Errors.Count, StringFormat='Errors: {0}', FallbackValue='Errors: 0'}"/>
             </StatusBarItem>
         </StatusBar>
     </Grid>
