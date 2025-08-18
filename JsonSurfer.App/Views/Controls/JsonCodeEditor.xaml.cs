@@ -39,8 +39,11 @@ public partial class JsonCodeEditor : UserControl, IRecipient<JsonErrorOccurredM
             JsonTextEditor.TextArea.TextView.BackgroundRenderers.Add(_textMarkerService);
         }
 
-        // Register for messages
-        WeakReferenceMessenger.Default.Register(this);
+        // Register for messages only if not already registered
+        if (!WeakReferenceMessenger.Default.IsRegistered<JsonErrorOccurredMessage>(this))
+        {
+            WeakReferenceMessenger.Default.Register(this);
+        }
         
         // Setup data binding through DataContext
         SetupDataBinding();

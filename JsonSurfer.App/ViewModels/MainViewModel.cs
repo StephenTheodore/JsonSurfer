@@ -40,6 +40,7 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private int _selectedTabIndex;
 
+
     public MainViewModel(IJsonParserService jsonParserService, IValidationService validationService, IFileService fileService)
     {
         _jsonParserService = jsonParserService;
@@ -173,6 +174,7 @@ public partial class MainViewModel : ObservableObject
             RootNode = _jsonParserService.ParseToTree(JsonContent);
         }
     }
+
 
     // Automatically mark as modified when content changes and validate
     partial void OnJsonContentChanged(string value)
