@@ -3,11 +3,20 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:models="clr-namespace:JsonSurfer.Core.Models;assembly=JsonSurfer.Core"
              mc:Ignorable="d"
              d:DesignHeight="450" d:DesignWidth="800">
     <Grid>
-        <TreeView>
-            <!-- TODO: TreeView implementation for JSON nodes -->
+        <TreeView x:Name="JsonTree" ItemsSource="{Binding RootNode.Children, FallbackValue={x:Null}}" SelectedItemChanged="JsonTree_SelectedItemChanged">
+            <TreeView.ItemTemplate>
+                <HierarchicalDataTemplate DataType="{x:Type models:JsonNode}" ItemsSource="{Binding Children}">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="{Binding Key}" FontWeight="Bold" Margin="0,0,5,0"/>
+                        <TextBlock Text="{Binding Value}" Foreground="Green" Margin="0,0,5,0"/>
+                        <TextBlock Text="{Binding Type, StringFormat='[{0}]'}" Foreground="Blue" FontStyle="Italic"/>
+                    </StackPanel>
+                </HierarchicalDataTemplate>
+            </TreeView.ItemTemplate>
         </TreeView>
     </Grid>
 </UserControl>
