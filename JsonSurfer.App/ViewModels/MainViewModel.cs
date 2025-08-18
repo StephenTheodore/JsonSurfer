@@ -8,7 +8,6 @@ namespace JsonSurfer.App.ViewModels;
 public partial class MainViewModel : ObservableObject
 {
     private readonly IJsonParserService _jsonParserService;
-    private readonly IValidationService _validationService;
 
     [ObservableProperty]
     private string _jsonContent = string.Empty;
@@ -22,10 +21,9 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private bool _isModified;
 
-    public MainViewModel(IJsonParserService jsonParserService, IValidationService validationService)
+    public MainViewModel(IJsonParserService jsonParserService)
     {
         _jsonParserService = jsonParserService;
-        _validationService = validationService;
     }
 
     [RelayCommand]

@@ -11,11 +11,12 @@ public static class ServiceCollectionExtensions
     {
         // Core services
         services.AddSingleton<IJsonParserService, JsonParserService>();
+        // TODO: Implement and register these services
         // services.AddSingleton<IValidationService, ValidationService>();
         // services.AddSingleton<IFileService, FileService>();
 
         // ViewModels
-        services.AddTransient<MainViewModel>();
+        services.AddSingleton<MainViewModel>();
 
         return services;
     }
