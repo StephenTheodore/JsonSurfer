@@ -10,6 +10,7 @@
     Title="{Binding WindowTitle}"
     Width="1600"
     Height="800"
+    AllowDrop="True"
     mc:Ignorable="d">
 
     <!--  Keyboard Shortcuts  -->
@@ -63,6 +64,7 @@
 
         <!--  Main Content  -->
         <TabControl
+            x:Name="MainTabControl"
             Grid.Row="1"
             Margin="5"
             SelectedIndex="{Binding SelectedTabIndex}">
@@ -82,6 +84,191 @@
                     <GridSplitter Grid.Column="1" HorizontalAlignment="Stretch" />
                     <Grid Grid.Column="2">
                         <xctk:PropertyGrid SelectedObject="{Binding SelectedNode}" />
+                    </Grid>
+                </Grid>
+            </TabItem>
+
+            <TabItem Header="Compare">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="5" />
+                        <RowDefinition Height="150" MinHeight="100" />
+                    </Grid.RowDefinitions>
+                    
+                    <!-- Compare Toolbar -->
+                    <Border Grid.Row="0" Background="#F0F0F0" Padding="10,5" BorderBrush="#CCCCCC" BorderThickness="0,0,0,1">
+                        <StackPanel Orientation="Horizontal">
+                            <Button Content="Load Left File" Command="{Binding LoadLeftFileCommand}" Margin="0,0,10,0" Padding="8,4" />
+                            <Button Content="Load Right File" Command="{Binding LoadRightFileCommand}" Margin="0,0,10,0" Padding="8,4" />
+                            <Separator Margin="10,0" />
+                            <Button Content="Compare" Command="{Binding CompareJsonCommand}" Margin="0,0,10,0" Padding="8,4" FontWeight="Bold" />
+                            <Button Content="Clear All" Command="{Binding ClearComparisonCommand}" Margin="0,0,10,0" Padding="8,4" />
+                        </StackPanel>
+                    </Border>
+                    
+                    <!-- Dual Editor Layout -->
+                    <Grid Grid.Row="1">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="5" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        
+                        <!-- Left Editor -->
+                        <Grid Grid.Column="0" AllowDrop="True" x:Name="LeftComparePanel">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+                            
+                            <Border Grid.Row="0" Background="#E8F4FD" Padding="8,4" BorderBrush="#B3D7FF" BorderThickness="0,0,0,1">
+                                <TextBlock Text="{Binding LeftFilePath, StringFormat='Left: {0}', FallbackValue='Left: Drop JSON file here or click Load Left File'}" 
+                                          FontWeight="Bold" Foreground="#0066CC" TextTrimming="CharacterEllipsis"
+                                          ToolTip="{Binding LeftFilePath}" />
+                            </Border>
+                            
+                            <TextBox Grid.Row="1" 
+                                     Text="{Binding LeftFormattedContent, Mode=OneWay}" 
+                                     IsReadOnly="True" 
+                                     FontFamily="Consolas" 
+                                     FontSize="12"
+                                     TextWrapping="NoWrap"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                     Background="White" />
+                        </Grid>
+                        
+                        <!-- Splitter -->
+                        <GridSplitter Grid.Column="1" HorizontalAlignment="Stretch" Background="#CCCCCC" />
+                        
+                        <!-- Right Editor -->
+                        <Grid Grid.Column="2" AllowDrop="True" x:Name="RightComparePanel">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="*" />
+                            </Grid.RowDefinitions>
+                            
+                            <Border Grid.Row="0" Background="#FFF2E8" Padding="8,4" BorderBrush="#FFD7B3" BorderThickness="0,0,0,1">
+                                <TextBlock Text="{Binding RightFilePath, StringFormat='Right: {0}', FallbackValue='Right: Drop JSON file here or click Load Right File'}" 
+                                          FontWeight="Bold" Foreground="#CC6600" TextTrimming="CharacterEllipsis"
+                                          ToolTip="{Binding RightFilePath}" />
+                            </Border>
+                            
+                            <TextBox Grid.Row="1" 
+                                     Text="{Binding RightFormattedContent, Mode=OneWay}" 
+                                     IsReadOnly="True" 
+                                     FontFamily="Consolas" 
+                                     FontSize="12"
+                                     TextWrapping="NoWrap"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                                     ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                     Background="White" />
+                        </Grid>
+                    </Grid>
+                    
+                    <!--  Compare GridSplitter  -->
+                    <GridSplitter
+                        Grid.Row="2"
+                        HorizontalAlignment="Stretch"
+                        Background="LightGray" />
+
+                    <!--  Compare Differences Panel  -->
+                    <Grid Grid.Row="3" Background="#F8F9FA">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+
+                        <Border
+                            Grid.Row="0"
+                            Padding="10,5"
+                            Background="#E9ECEF"
+                            BorderBrush="#DEE2E6"
+                            BorderThickness="0,0,0,1">
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock
+                                    Margin="0,0,10,0"
+                                    FontWeight="Bold"
+                                    Text="Differences" />
+                                <TextBlock
+                                    Margin="0,0,10,0"
+                                    Foreground="Orange"
+                                    Text="{Binding Differences.Count, StringFormat='{}{0} differences', FallbackValue='0 differences'}" />
+                                <TextBlock
+                                    Margin="0,0,10,0"
+                                    Foreground="Blue"
+                                    FontWeight="Bold"
+                                    Text="{Binding HighlightedLine, StringFormat='📍 Line {0}', FallbackValue=''}" />
+                                <TextBlock
+                                    Foreground="Gray"
+                                    Text="{Binding ComparisonResult, FallbackValue='Run Compare to see differences'}" />
+                            </StackPanel>
+                        </Border>
+
+                        <DataGrid
+                            Grid.Row="1"
+                            AutoGenerateColumns="False"
+                            Background="White"
+                            BorderThickness="0"
+                            CanUserAddRows="False"
+                            CanUserDeleteRows="False"
+                            CanUserResizeRows="False"
+                            GridLinesVisibility="Horizontal"
+                            HeadersVisibility="Column"
+                            ItemsSource="{Binding Differences}"
+                            MouseDoubleClick="CompareList_MouseDoubleClick">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn
+                                    Width="80"
+                                    Binding="{Binding Type}"
+                                    Header="Type"
+                                    IsReadOnly="True">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="Foreground" Value="Orange" />
+                                            <Setter Property="FontWeight" Value="Bold" />
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn
+                                    Width="60"
+                                    Binding="{Binding Line}"
+                                    Header="Line"
+                                    IsReadOnly="True">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="HorizontalAlignment" Value="Center" />
+                                            <Setter Property="FontWeight" Value="Bold" />
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn
+                                    Width="60"
+                                    Binding="{Binding Column}"
+                                    Header="Column"
+                                    IsReadOnly="True">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="HorizontalAlignment" Value="Center" />
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                                <DataGridTextColumn
+                                    Width="*"
+                                    Binding="{Binding Message}"
+                                    Header="Description"
+                                    IsReadOnly="True">
+                                    <DataGridTextColumn.ElementStyle>
+                                        <Style TargetType="TextBlock">
+                                            <Setter Property="TextWrapping" Value="Wrap" />
+                                            <Setter Property="Margin" Value="5,2" />
+                                        </Style>
+                                    </DataGridTextColumn.ElementStyle>
+                                </DataGridTextColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
                     </Grid>
                 </Grid>
             </TabItem>
