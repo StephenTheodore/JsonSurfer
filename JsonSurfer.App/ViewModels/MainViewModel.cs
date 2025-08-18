@@ -21,7 +21,7 @@ public partial class MainViewModel : ObservableObject
     private JsonNode? _rootNode;
 
     [ObservableProperty]
-    private JsonNode? _selectedNode;
+    private JsonNode? _selectedNode; // Added this property
 
     [ObservableProperty]
     private ValidationResult? _validationResult;
@@ -155,6 +155,48 @@ public partial class MainViewModel : ObservableObject
         if (!string.IsNullOrEmpty(CurrentFilePath))
         {
             IsModified = true;
+        }
+    }
+
+    // Added these methods for bidirectional synchronization
+    public void UpdateTextFromVisuals()
+    {
+        if (RootNode != null)
+        {
+            try
+            {
+                JsonContent = _jsonParserService.SerializeFromTree(RootNode);
+                ValidationResult = _jsonParserService.ValidateJson(JsonContent);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error serializing JSON from tree: {ex.Message}", "Serialization Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                // Optionally, revert to previous JsonContent or show a clear error state
+            }
+        }
+    }
+
+    public void UpdateVisualsFromText()
+    {
+        if (!string.IsNullOrEmpty(JsonContent))
+        {
+            ValidationResult = _jsonParserService.ValidateJson(JsonContent);
+            if (ValidationResult.IsValid)
+            {
+                RootNode = _jsonParserService.ParseToTree(JsonContent);
+            }
+            else
+            {
+                // If JSON is invalid, clear the visual tree to avoid displaying incorrect data
+                RootNode = null;
+                SelectedNode = null;
+                MessageBox.Show($"Invalid JSON: {ValidationResult.Errors.FirstOrDefault()?.Message}", "JSON Parsing Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+        else
+        {
+            RootNode = null;
+            SelectedNode = null;
         }
     }
 }
