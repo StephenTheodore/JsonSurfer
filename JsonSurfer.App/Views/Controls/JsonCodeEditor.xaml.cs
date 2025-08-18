@@ -21,7 +21,10 @@ public partial class JsonCodeEditor : UserControl
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
         // Setup folding
-        _foldingManager = FoldingManager.Install(JsonTextEditor.TextArea);
+        if (_foldingManager == null)
+        {
+            _foldingManager = FoldingManager.Install(JsonTextEditor.TextArea);
+        }
         
         // Find MainViewModel in the DataContext chain
         var mainWindow = Window.GetWindow(this);

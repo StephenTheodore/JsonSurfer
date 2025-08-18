@@ -21,6 +21,9 @@ public partial class MainViewModel : ObservableObject
     private JsonNode? _rootNode;
 
     [ObservableProperty]
+    private JsonNode? _selectedNode;
+
+    [ObservableProperty]
     private ValidationResult? _validationResult;
 
     [ObservableProperty]
