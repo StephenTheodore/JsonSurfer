@@ -3,14 +3,27 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:avalon="http://icsharpcode.net/sharpdevelop/avalonedit"
              mc:Ignorable="d"
              d:DesignHeight="450" d:DesignWidth="800">
     <Grid>
-        <!-- TODO: AvalonEdit TextEditor will be added here -->
-        <TextBox AcceptsReturn="True" 
-                 AcceptsTab="True"
-                 FontFamily="Consolas"
-                 VerticalScrollBarVisibility="Auto"
-                 HorizontalScrollBarVisibility="Auto"/>
+        <avalon:TextEditor Name="JsonTextEditor"
+                           FontFamily="Consolas"
+                           FontSize="12"
+                           ShowLineNumbers="True"
+                           WordWrap="False"
+                           SyntaxHighlighting="JSON"
+                           VerticalScrollBarVisibility="Auto"
+                           HorizontalScrollBarVisibility="Auto">
+            <avalon:TextEditor.Options>
+                <avalon:TextEditorOptions ShowBoxForControlCharacters="True"
+                                          ShowEndOfLine="False"
+                                          ShowSpaces="False"
+                                          ShowTabs="False"
+                                          IndentationSize="2"
+                                          ConvertTabsToSpaces="True"
+                                          EnableHyperlinks="False"/>
+            </avalon:TextEditor.Options>
+        </avalon:TextEditor>
     </Grid>
 </UserControl>
