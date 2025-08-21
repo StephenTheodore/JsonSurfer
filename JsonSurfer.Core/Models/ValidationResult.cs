@@ -38,3 +38,12 @@ public enum WarningType
     UnusualValue,
     DuplicateKey
 }
+
+public class ProblemItem
+{
+    public string Message { get; set; } = string.Empty;
+    public int Line { get; set; }
+    public int Column { get; set; }
+    public string Type { get; set; } = string.Empty;
+    public bool IsError { get; set; }
+}

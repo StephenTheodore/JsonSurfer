@@ -7,6 +7,8 @@ using JsonSurfer.App.Messages;
 using Microsoft.Win32;
 using System.IO;
 using System.Windows;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace JsonSurfer.App.ViewModels;
 
@@ -27,6 +29,9 @@ public partial class MainViewModel : ObservableObject
 
     [ObservableProperty]
     private ValidationResult? _validationResult;
+
+    [ObservableProperty]
+    private List<ProblemItem> _allProblems = [];
 
     [ObservableProperty]
     private bool _isModified;
@@ -166,12 +171,56 @@ public partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private void FormatJson()
+    {
+        if (!string.IsNullOrEmpty(JsonContent))
+        {
+            try
+            {
+                var formattedContent = _jsonParserService.FormatJson(JsonContent);
+                JsonContent = formattedContent;
+                // ValidationResult will be updated automatically via OnJsonContentChanged
+                MessageBox.Show("JSON formatted successfully!", "Format Complete", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Failed to format JSON: {ex.Message}", "Format Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+    }
+
+    [RelayCommand]
     private void ValidateJson()
     {
         if (!string.IsNullOrEmpty(JsonContent))
         {
-            ValidationResult = _jsonParserService.ValidateJson(JsonContent);
-            RootNode = _jsonParserService.ParseToTree(JsonContent);
+            try
+            {
+                ValidationResult = _jsonParserService.ValidateJsonWithAutoFix(JsonContent);
+                RootNode = _jsonParserService.ParseToTree(JsonContent);
+            }
+            catch (Exception ex)
+            {
+                // Create error validation result if service fails
+                ValidationResult = new ValidationResult
+                {
+                    IsValid = false,
+                    Errors = [new ValidationError
+                    {
+                        Message = $"Validation service error: {ex.Message}",
+                        Line = 0,
+                        Column = 0,
+                        Type = ErrorType.SyntaxError
+                    }]
+                };
+                RootNode = null;
+            }
+        }
+        else
+        {
+            // Clear validation result when content is empty
+            ValidationResult = new ValidationResult { IsValid = true };
+            RootNode = null;
         }
     }
 
@@ -186,6 +235,12 @@ public partial class MainViewModel : ObservableObject
         
         // Auto-validate on content change
         ValidateJson();
+    }
+
+    // Handle validation result changes to update problems list
+    partial void OnValidationResultChanged(ValidationResult? value)
+    {
+        UpdateAllProblems();
     }
 
     // Handle tab changes through property change notification
@@ -206,6 +261,36 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
+    private void UpdateAllProblems()
+    {
+        var problems = new List<ProblemItem>();
+
+        if (ValidationResult != null)
+        {
+            // Add errors
+            problems.AddRange(ValidationResult.Errors.Select(error => new ProblemItem
+            {
+                Message = error.Message,
+                Line = error.Line,
+                Column = error.Column,
+                Type = error.Type.ToString(),
+                IsError = true
+            }));
+
+            // Add warnings
+            problems.AddRange(ValidationResult.Warnings.Select(warning => new ProblemItem
+            {
+                Message = warning.Message,
+                Line = warning.Line,
+                Column = warning.Column,
+                Type = warning.Type.ToString(),
+                IsError = false
+            }));
+        }
+
+        AllProblems = problems;
+    }
+
     // Added these methods for bidirectional synchronization
     public void UpdateTextFromVisuals()
     {
@@ -214,12 +299,24 @@ public partial class MainViewModel : ObservableObject
             try
             {
                 JsonContent = _jsonParserService.SerializeFromTree(RootNode);
-                ValidationResult = _jsonParserService.ValidateJson(JsonContent);
+                ValidationResult = _jsonParserService.ValidateJsonWithAutoFix(JsonContent);
             }
             catch (Exception ex)
             {
                 MessageBox.Show($"Error serializing JSON from tree: {ex.Message}", "Serialization Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                // Optionally, revert to previous JsonContent or show a clear error state
+                
+                // Create error validation result to show the serialization error
+                ValidationResult = new ValidationResult
+                {
+                    IsValid = false,
+                    Errors = [new ValidationError
+                    {
+                        Message = $"Serialization error: {ex.Message}",
+                        Line = 0,
+                        Column = 0,
+                        Type = ErrorType.InvalidFormat
+                    }]
+                };
             }
         }
     }
@@ -228,21 +325,43 @@ public partial class MainViewModel : ObservableObject
     {
         if (!string.IsNullOrEmpty(JsonContent))
         {
-            ValidationResult = _jsonParserService.ValidateJson(JsonContent);
-            if (ValidationResult.IsValid)
+            try
             {
-                RootNode = _jsonParserService.ParseToTree(JsonContent);
+                ValidationResult = _jsonParserService.ValidateJsonWithAutoFix(JsonContent);
+                if (ValidationResult.IsValid)
+                {
+                    RootNode = _jsonParserService.ParseToTree(JsonContent);
+                }
+                else
+                {
+                    // If JSON is invalid, clear the visual tree to avoid displaying incorrect data
+                    RootNode = null;
+                    SelectedNode = null;
+                    MessageBox.Show($"Invalid JSON: {ValidationResult.Errors.FirstOrDefault()?.Message}", "JSON Parsing Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
             }
-            else
+            catch (Exception ex)
             {
-                // If JSON is invalid, clear the visual tree to avoid displaying incorrect data
+                // Create error validation result if service fails
+                ValidationResult = new ValidationResult
+                {
+                    IsValid = false,
+                    Errors = [new ValidationError
+                    {
+                        Message = $"Parsing service error: {ex.Message}",
+                        Line = 0,
+                        Column = 0,
+                        Type = ErrorType.SyntaxError
+                    }]
+                };
                 RootNode = null;
                 SelectedNode = null;
-                MessageBox.Show($"Invalid JSON: {ValidationResult.Errors.FirstOrDefault()?.Message}", "JSON Parsing Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show($"Parsing error: {ex.Message}", "JSON Service Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
         else
         {
+            ValidationResult = new ValidationResult { IsValid = true };
             RootNode = null;
             SelectedNode = null;
         }

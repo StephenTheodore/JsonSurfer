@@ -24,6 +24,10 @@
             Command="{Binding SaveFileCommand}"
             Modifiers="Ctrl" />
         <KeyBinding Key="F5" Command="{Binding ValidateJsonCommand}" />
+        <KeyBinding
+            Key="F"
+            Command="{Binding FormatJsonCommand}"
+            Modifiers="Ctrl+Shift" />
     </Window.InputBindings>
 
     <Grid>
@@ -58,6 +62,10 @@
                         Command="{Binding ValidateJsonCommand}"
                         Header="_Validate"
                         InputGestureText="F5" />
+                    <MenuItem
+                        Command="{Binding FormatJsonCommand}"
+                        Header="_Format/Beautify JSON"
+                        InputGestureText="Ctrl+Shift+F" />
                 </MenuItem>
             </Menu>
         </DockPanel>
@@ -303,6 +311,10 @@
                         Foreground="Red"
                         Text="{Binding ValidationResult.Errors.Count, StringFormat='{}{0} errors', FallbackValue='0 errors'}" />
                     <TextBlock Foreground="Orange" Text="{Binding ValidationResult.Warnings.Count, StringFormat='{}{0} warnings', FallbackValue='0 warnings'}" />
+                    <TextBlock
+                        Margin="10,0,0,0"
+                        Foreground="Gray"
+                        Text="{Binding AllProblems.Count, StringFormat='({0} total)', FallbackValue='(0 total)'}" />
                 </StackPanel>
             </Border>
 
@@ -316,7 +328,7 @@
                 CanUserResizeRows="False"
                 GridLinesVisibility="Horizontal"
                 HeadersVisibility="Column"
-                ItemsSource="{Binding ValidationResult.Errors}"
+                ItemsSource="{Binding AllProblems}"
                 MouseDoubleClick="ErrorList_MouseDoubleClick">
                 <DataGrid.Columns>
                     <DataGridTextColumn
@@ -326,8 +338,15 @@
                         IsReadOnly="True">
                         <DataGridTextColumn.ElementStyle>
                             <Style TargetType="TextBlock">
-                                <Setter Property="Foreground" Value="Red" />
                                 <Setter Property="FontWeight" Value="Bold" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsError}" Value="True">
+                                        <Setter Property="Foreground" Value="Red" />
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding IsError}" Value="False">
+                                        <Setter Property="Foreground" Value="Orange" />
+                                    </DataTrigger>
+                                </Style.Triggers>
                             </Style>
                         </DataGridTextColumn.ElementStyle>
                     </DataGridTextColumn>
