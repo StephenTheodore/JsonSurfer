@@ -1,14 +1,163 @@
+using System.ComponentModel;
+
 namespace JsonSurfer.Core.Models;
 
-public class JsonNode
+public class JsonNode : INotifyPropertyChanged
 {
-    public string Key { get; set; } = string.Empty;
-    public object? Value { get; set; }
-    public JsonNodeType Type { get; set; }
-    public List<JsonNode> Children { get; set; } = [];
-    public JsonNode? Parent { get; set; }
-    public int Line { get; set; }
-    public int Column { get; set; }
+    private string _key = string.Empty;
+    private object? _value;
+    private JsonNodeType _type;
+    private List<JsonNode> _children = [];
+    private JsonNode? _parent;
+    private int _line;
+    private int _column;
+    private bool _isExpanded = true; // Default to expanded for better UX
+
+    public string Key 
+    { 
+        get => _key; 
+        set 
+        { 
+            if (_key != value) 
+            { 
+                _key = value; 
+                OnPropertyChanged(nameof(Key)); 
+            } 
+        } 
+    }
+
+    public object? Value 
+    { 
+        get => _value; 
+        set 
+        { 
+            if (_value != value) 
+            { 
+                _value = value; 
+                OnPropertyChanged(nameof(Value)); 
+            } 
+        } 
+    }
+
+    public JsonNodeType Type 
+    { 
+        get => _type; 
+        set 
+        { 
+            if (_type != value) 
+            { 
+                _type = value; 
+                OnPropertyChanged(nameof(Type)); 
+            } 
+        } 
+    }
+
+    public List<JsonNode> Children 
+    { 
+        get => _children; 
+        set 
+        { 
+            if (_children != value) 
+            { 
+                _children = value; 
+                OnPropertyChanged(nameof(Children)); 
+            } 
+        } 
+    }
+
+    public JsonNode? Parent 
+    { 
+        get => _parent; 
+        set 
+        { 
+            if (_parent != value) 
+            { 
+                _parent = value; 
+                OnPropertyChanged(nameof(Parent)); 
+            } 
+        } 
+    }
+
+    public int Line 
+    { 
+        get => _line; 
+        set 
+        { 
+            if (_line != value) 
+            { 
+                _line = value; 
+                OnPropertyChanged(nameof(Line)); 
+            } 
+        } 
+    }
+
+    public int Column 
+    { 
+        get => _column; 
+        set 
+        { 
+            if (_column != value) 
+            { 
+                _column = value; 
+                OnPropertyChanged(nameof(Column)); 
+            } 
+        } 
+    }
+
+    public bool IsExpanded 
+    { 
+        get => _isExpanded; 
+        set 
+        { 
+            if (_isExpanded != value) 
+            { 
+                _isExpanded = value; 
+                OnPropertyChanged(nameof(IsExpanded)); 
+            } 
+        } 
+    }
+
+    // Helper property to get unique path for state tracking
+    public string NodePath
+    {
+        get
+        {
+            var path = new List<string>();
+            var current = this;
+            while (current?.Parent != null)
+            {
+                path.Insert(0, current.Key);
+                current = current.Parent;
+            }
+            return string.Join(".", path);
+        }
+    }
+
+    public event PropertyChangedEventHandler? PropertyChanged;
+
+    protected virtual void OnPropertyChanged(string propertyName)
+    {
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+    }
+
+    // Helper methods for expand/collapse operations
+    public void ExpandAll()
+    {
+        IsExpanded = true;
+        foreach (var child in Children)
+        {
+            child.ExpandAll();
+        }
+    }
+
+    public void CollapseAll()
+    {
+        IsExpanded = false;
+        foreach (var child in Children)
+        {
+            child.CollapseAll();
+        }
+    }
 }
 
 public enum JsonNodeType

@@ -45,6 +45,9 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private int _selectedTabIndex;
 
+    // Dictionary to store node expansion states by path
+    private Dictionary<string, bool> _nodeExpansionStates = new();
+
 
     public MainViewModel(IJsonParserService jsonParserService, IValidationService validationService, IFileService fileService)
     {
@@ -198,6 +201,9 @@ public partial class MainViewModel : ObservableObject
             {
                 ValidationResult = _jsonParserService.ValidateJsonWithAutoFix(JsonContent);
                 RootNode = _jsonParserService.ParseToTree(JsonContent);
+                
+                // Restore expansion states after parsing
+                RestoreNodeExpansionStates();
             }
             catch (Exception ex)
             {
@@ -224,6 +230,26 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
+    [RelayCommand]
+    private void ExpandAllNodes()
+    {
+        if (RootNode != null)
+        {
+            RootNode.ExpandAll();
+            SaveNodeExpansionStates();
+        }
+    }
+
+    [RelayCommand]
+    private void CollapseAllNodes()
+    {
+        if (RootNode != null)
+        {
+            RootNode.CollapseAll();
+            SaveNodeExpansionStates();
+        }
+    }
+
 
     // Automatically mark as modified when content changes and validate
     partial void OnJsonContentChanged(string value)
@@ -243,23 +269,6 @@ public partial class MainViewModel : ObservableObject
         UpdateAllProblems();
     }
 
-    // Handle tab changes through property change notification
-    partial void OnSelectedTabIndexChanged(int value)
-    {
-        System.Diagnostics.Debug.WriteLine($"Tab changed to index: {value}");
-        
-        // 0 = Code Editor, 1 = Visual Editor
-        if (value == 0) // Code Editor selected
-        {
-            System.Diagnostics.Debug.WriteLine("Switching to Code Editor - UpdateTextFromVisuals");
-            UpdateTextFromVisuals();
-        }
-        else if (value == 1) // Visual Editor selected  
-        {
-            System.Diagnostics.Debug.WriteLine("Switching to Visual Editor - UpdateVisualsFromText");
-            UpdateVisualsFromText();
-        }
-    }
 
     private void UpdateAllProblems()
     {
@@ -331,6 +340,9 @@ public partial class MainViewModel : ObservableObject
                 if (ValidationResult.IsValid)
                 {
                     RootNode = _jsonParserService.ParseToTree(JsonContent);
+                    
+                    // Restore expansion states after updating visuals
+                    RestoreNodeExpansionStates();
                 }
                 else
                 {
@@ -364,6 +376,74 @@ public partial class MainViewModel : ObservableObject
             ValidationResult = new ValidationResult { IsValid = true };
             RootNode = null;
             SelectedNode = null;
+        }
+    }
+
+    // Node expansion state management methods
+    private void SaveNodeExpansionStates()
+    {
+        _nodeExpansionStates.Clear();
+        if (RootNode != null)
+        {
+            SaveNodeExpansionStatesRecursive(RootNode);
+        }
+    }
+
+    private void SaveNodeExpansionStatesRecursive(JsonNode node)
+    {
+        if (!string.IsNullOrEmpty(node.NodePath))
+        {
+            _nodeExpansionStates[node.NodePath] = node.IsExpanded;
+        }
+        
+        foreach (var child in node.Children)
+        {
+            SaveNodeExpansionStatesRecursive(child);
+        }
+    }
+
+    private void RestoreNodeExpansionStates()
+    {
+        if (RootNode != null && _nodeExpansionStates.Count > 0)
+        {
+            RestoreNodeExpansionStatesRecursive(RootNode);
+        }
+    }
+
+    private void RestoreNodeExpansionStatesRecursive(JsonNode node)
+    {
+        if (!string.IsNullOrEmpty(node.NodePath) && _nodeExpansionStates.ContainsKey(node.NodePath))
+        {
+            node.IsExpanded = _nodeExpansionStates[node.NodePath];
+        }
+        
+        foreach (var child in node.Children)
+        {
+            RestoreNodeExpansionStatesRecursive(child);
+        }
+    }
+
+    // Save expansion states when switching from Visual Editor tab
+    partial void OnSelectedTabIndexChanged(int value)
+    {
+        System.Diagnostics.Debug.WriteLine($"Tab changed to index: {value}");
+        
+        // Save expansion states when leaving Visual Editor tab
+        if (_selectedTabIndex == 1 && value != 1) // Leaving Visual Editor
+        {
+            SaveNodeExpansionStates();
+        }
+        
+        // 0 = Code Editor, 1 = Visual Editor
+        if (value == 0) // Code Editor selected
+        {
+            System.Diagnostics.Debug.WriteLine("Switching to Code Editor - UpdateTextFromVisuals");
+            UpdateTextFromVisuals();
+        }
+        else if (value == 1) // Visual Editor selected  
+        {
+            System.Diagnostics.Debug.WriteLine("Switching to Visual Editor - UpdateVisualsFromText");
+            UpdateVisualsFromText();
         }
     }
 }
