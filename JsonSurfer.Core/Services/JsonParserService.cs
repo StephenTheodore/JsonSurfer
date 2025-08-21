@@ -114,6 +114,52 @@ public class JsonParserService : IJsonParserService
         return result;
     }
 
+    public ValidationResult ValidateJsonWithAutoFix(string jsonContent)
+    {
+        var autoFixService = new JsonAutoFixService();
+        var fixResult = autoFixService.AnalyzeAndFix(jsonContent, applyFixes: false);
+        
+        return new ValidationResult
+        {
+            IsValid = !fixResult.Errors.Any(),
+            Errors = fixResult.Errors,
+            Warnings = [] // Can add auto-fix suggestions as warnings later
+        };
+    }
+
+    public string FormatJson(string jsonContent)
+    {
+        var autoFixService = new JsonAutoFixService();
+        var fixResult = autoFixService.AnalyzeAndFix(jsonContent, applyFixes: true);
+        
+        if (!fixResult.Errors.Any())
+        {
+            // Successfully fixed, now format it nicely
+            try
+            {
+                var jsonDoc = JsonDocument.Parse(fixResult.FixedContent);
+                using var stream = new MemoryStream();
+                using var writer = new Utf8JsonWriter(stream, new JsonWriterOptions 
+                { 
+                    Indented = true, 
+                    Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping 
+                });
+                
+                jsonDoc.WriteTo(writer);
+                writer.Flush();
+                
+                return System.Text.Encoding.UTF8.GetString(stream.ToArray());
+            }
+            catch
+            {
+                // If formatting fails, return the fixed content as-is
+                return fixResult.FixedContent;
+            }
+        }
+        
+        return fixResult.FixedContent;
+    }
+
     public async Task<JsonNode?> ParseFileAsync(string filePath)
     {
         try

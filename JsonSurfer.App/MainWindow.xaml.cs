@@ -130,11 +130,11 @@ public partial class MainWindow : Window
 
     private void ErrorList_MouseDoubleClick(object sender, MouseButtonEventArgs e)
     {
-        if (sender is System.Windows.Controls.DataGrid dataGrid && dataGrid.SelectedItem is JsonSurfer.Core.Models.ValidationError error)
+        if (sender is System.Windows.Controls.DataGrid dataGrid && dataGrid.SelectedItem is JsonSurfer.Core.Models.ProblemItem problem)
         {
             // Send message to JsonCodeEditor to navigate to the error line
             WeakReferenceMessenger.Default.Send(new JsonErrorOccurredMessage(
-                new JsonErrorDetails(error.Message, error.Line, error.Column)));
+                new JsonErrorDetails(problem.Message, problem.Line, problem.Column)));
         }
     }
 
