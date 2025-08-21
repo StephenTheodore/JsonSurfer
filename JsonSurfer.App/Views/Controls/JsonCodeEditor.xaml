@@ -9,7 +9,7 @@
     <Grid>
         <avalon:TextEditor Name="JsonTextEditor"
                            FontFamily="Consolas"
-                           FontSize="12"
+                           FontSize="{Binding CodeEditorFontSize}"
                            ShowLineNumbers="True"
                            WordWrap="False"
                            SyntaxHighlighting="Json"
