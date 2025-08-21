@@ -338,4 +338,15 @@ public partial class MainWindow : Window
         var extension = Path.GetExtension(filePath).ToLowerInvariant();
         return extension == ".json" || extension == ".info";
     }
+
+    private void PropertyGrid_PropertyValueChanged(object sender, Xceed.Wpf.Toolkit.PropertyGrid.PropertyValueChangedEventArgs e)
+    {
+        // When PropertyGrid value changes, mark as modified and update JSON content ONLY
+        _viewModel.IsModified = true;
+        
+        // Update JSON content from tree without rebuilding the tree (prevents collapse)
+        _viewModel.UpdateJsonContentFromTree();
+        
+        System.Diagnostics.Debug.WriteLine($"PropertyGrid value changed: {e.OldValue} -> {e.NewValue}");
+    }
 }

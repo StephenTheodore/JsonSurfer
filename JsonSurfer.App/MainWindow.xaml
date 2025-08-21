@@ -91,7 +91,8 @@
                     <controls:JsonTreeView Grid.Column="0" DataContext="{Binding}" />
                     <GridSplitter Grid.Column="1" HorizontalAlignment="Stretch" />
                     <Grid Grid.Column="2">
-                        <xctk:PropertyGrid SelectedObject="{Binding SelectedNode}" />
+                        <xctk:PropertyGrid SelectedObject="{Binding SelectedNode}" 
+                                          PropertyValueChanged="PropertyGrid_PropertyValueChanged" />
                     </Grid>
                 </Grid>
             </TabItem>
