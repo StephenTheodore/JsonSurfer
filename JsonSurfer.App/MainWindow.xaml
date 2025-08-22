@@ -2,15 +2,16 @@
     x:Class="JsonSurfer.App.MainWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:behaviors="clr-namespace:JsonSurfer.App.Behaviors"
     xmlns:controls="clr-namespace:JsonSurfer.App.Views.Controls"
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:i="http://schemas.microsoft.com/xaml/behaviors"
     xmlns:local="clr-namespace:JsonSurfer.App"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:xctk="http://schemas.xceed.com/wpf/xaml/toolkit"
     Title="{Binding WindowTitle}"
     Width="1600"
     Height="800"
-    AllowDrop="True"
     mc:Ignorable="d">
 
     <!--  Keyboard Shortcuts  -->
@@ -53,6 +54,15 @@
             Command="{Binding ResetZoomCommand}"
             Modifiers="Ctrl" />
     </Window.InputBindings>
+
+    <!--  Behaviors for MVVM compliance  -->
+    <i:Interaction.Behaviors>
+        <behaviors:DropFileBehavior 
+            DropCommand="{Binding HandleFileDropCommand}" />
+        <behaviors:MouseWheelZoomBehavior 
+            ZoomInCommand="{Binding ZoomInCommand}"
+            ZoomOutCommand="{Binding ZoomOutCommand}" />
+    </i:Interaction.Behaviors>
 
     <Grid>
         <Grid.RowDefinitions>
@@ -129,8 +139,11 @@
                     <controls:JsonTreeView Grid.Column="0" DataContext="{Binding}" />
                     <GridSplitter Grid.Column="1" HorizontalAlignment="Stretch" />
                     <Grid Grid.Column="2">
-                        <xctk:PropertyGrid SelectedObject="{Binding SelectedNode}" 
-                                          PropertyValueChanged="PropertyGrid_PropertyValueChanged" />
+                        <xctk:PropertyGrid SelectedObject="{Binding SelectedNode}">
+                            <i:Interaction.Behaviors>
+                                <behaviors:PropertyGridBehavior PropertyValueChangedCommand="{Binding HandlePropertyValueChangedCommand}" />
+                            </i:Interaction.Behaviors>
+                        </xctk:PropertyGrid>
                     </Grid>
                 </Grid>
             </TabItem>

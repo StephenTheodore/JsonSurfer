@@ -26,14 +26,6 @@ public partial class MainWindow : Window
         // Get CompareViewModel from DI
         _compareViewModel = serviceProvider.GetRequiredService<CompareViewModel>();
         
-        // Setup drag and drop event handlers
-        Drop += MainWindow_Drop;
-        
-        // Setup mouse wheel event handler for zoom
-        PreviewMouseWheel += MainWindow_PreviewMouseWheel;
-        DragEnter += MainWindow_DragEnter;
-        DragOver += MainWindow_DragOver;
-        
         // Set Compare tab DataContext
         Loaded += MainWindow_Loaded;
     }
@@ -263,59 +255,4 @@ public partial class MainWindow : Window
         return null;
     }
 
-    private void MainWindow_DragEnter(object sender, DragEventArgs e)
-    {
-        if (e.Data.GetDataPresent(DataFormats.FileDrop))
-        {
-            string[] files = (string[])e.Data.GetData(DataFormats.FileDrop);
-            e.Effects = _viewModel.CanAcceptFiles(files) ? DragDropEffects.Copy : DragDropEffects.None;
-        }
-        else
-        {
-            e.Effects = DragDropEffects.None;
-        }
-        e.Handled = true;
-    }
-
-    private void MainWindow_DragOver(object sender, DragEventArgs e)
-    {
-        // Same logic as DragEnter
-        MainWindow_DragEnter(sender, e);
-    }
-
-    private async void MainWindow_Drop(object sender, DragEventArgs e)
-    {
-        if (e.Data.GetDataPresent(DataFormats.FileDrop))
-        {
-            string[] files = (string[])e.Data.GetData(DataFormats.FileDrop);
-            await _viewModel.HandleFileDropCommand.ExecuteAsync(files);
-        }
-        e.Handled = true;
-    }
-
-    
-    private void PropertyGrid_PropertyValueChanged(object sender, Xceed.Wpf.Toolkit.PropertyGrid.PropertyValueChangedEventArgs e)
-    {
-        _viewModel.HandlePropertyValueChangedCommand.Execute(null);
-        System.Diagnostics.Debug.WriteLine($"PropertyGrid value changed: {e.OldValue} -> {e.NewValue}");
-    }
-
-    private void MainWindow_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
-    {
-        if (Keyboard.Modifiers == ModifierKeys.Control)
-        {
-            e.Handled = true;
-            
-            if (e.Delta > 0)
-            {
-                // Scroll up - zoom in
-                _viewModel.ZoomInCommand.Execute(null);
-            }
-            else
-            {
-                // Scroll down - zoom out
-                _viewModel.ZoomOutCommand.Execute(null);
-            }
-        }
-    }
 }

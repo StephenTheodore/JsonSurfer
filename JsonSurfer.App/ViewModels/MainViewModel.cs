@@ -560,6 +560,7 @@ public partial class MainViewModel : ObservableObject
         UpdateJsonContentFromTree();
     }
 
+
     private async Task LoadFileFromPath(string filePath)
     {
         try
@@ -588,11 +589,6 @@ public partial class MainViewModel : ObservableObject
             
         var extension = System.IO.Path.GetExtension(filePath).ToLowerInvariant();
         return extension == ".json" || extension == ".info";
-    }
-
-    public bool CanAcceptFiles(string[] files)
-    {
-        return files?.Any(IsValidJsonFile) == true;
     }
 
     #endregion
