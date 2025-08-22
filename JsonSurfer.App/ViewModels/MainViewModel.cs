@@ -53,6 +53,9 @@ public partial class MainViewModel : ObservableObject
     private bool _isUpdatingFromTree = false;
 
     [ObservableProperty]
+    private bool _isExecutingExpandCollapseAll = false;
+
+    [ObservableProperty]
     private double _zoomLevel = 1.0;
 
     public string ZoomPercentage => $"{ZoomLevel * 100:0}%";
@@ -287,8 +290,16 @@ public partial class MainViewModel : ObservableObject
     {
         if (RootNode != null)
         {
-            RootNode.ExpandAll();
-            SaveNodeExpansionStates();
+            IsExecutingExpandCollapseAll = true;
+            try
+            {
+                RootNode.ExpandAll();
+                SaveNodeExpansionStates();
+            }
+            finally
+            {
+                IsExecutingExpandCollapseAll = false;
+            }
         }
     }
 
@@ -297,8 +308,19 @@ public partial class MainViewModel : ObservableObject
     {
         if (RootNode != null)
         {
-            RootNode.CollapseAll();
-            SaveNodeExpansionStates();
+            IsExecutingExpandCollapseAll = true;
+            try
+            {
+                System.Diagnostics.Debug.WriteLine("=== CollapseAll Started ===");
+                RootNode.CollapseAll();
+                System.Diagnostics.Debug.WriteLine("=== Saving Expansion States ===");
+                SaveNodeExpansionStates();
+                System.Diagnostics.Debug.WriteLine("=== CollapseAll Completed ===");
+            }
+            finally
+            {
+                IsExecutingExpandCollapseAll = false;
+            }
         }
     }
 
@@ -510,6 +532,7 @@ public partial class MainViewModel : ObservableObject
         if (!string.IsNullOrEmpty(node.NodePath))
         {
             NodeExpansionStates[node.NodePath] = node.IsExpanded;
+            System.Diagnostics.Debug.WriteLine($"Save: {node.NodePath} = {node.IsExpanded}");
         }
         
         foreach (var child in node.Children)
@@ -520,10 +543,23 @@ public partial class MainViewModel : ObservableObject
 
     private void RestoreNodeExpansionStates()
     {
+        // Skip restoration when executing ExpandAll/CollapseAll commands
+        if (IsExecutingExpandCollapseAll)
+        {
+            System.Diagnostics.Debug.WriteLine("=== Restore SKIPPED - IsExecutingExpandCollapseAll = true ===");
+            return;
+        }
+        
+        System.Diagnostics.Debug.WriteLine("=== Restore Started ===");
         if (RootNode != null && NodeExpansionStates.Count > 0)
         {
             RestoreNodeExpansionStatesRecursive(RootNode);
         }
+        else
+        {
+            System.Diagnostics.Debug.WriteLine("No RootNode or NodeExpansionStates is empty");
+        }
+        System.Diagnostics.Debug.WriteLine("=== Restore Completed ===");
     }
 
     private void RestoreNodeExpansionStatesRecursive(JsonNode node)
@@ -531,6 +567,7 @@ public partial class MainViewModel : ObservableObject
         if (!string.IsNullOrEmpty(node.NodePath) && NodeExpansionStates.ContainsKey(node.NodePath))
         {
             node.IsExpanded = NodeExpansionStates[node.NodePath];
+            System.Diagnostics.Debug.WriteLine($"Restore: {node.NodePath} = {node.IsExpanded}");
         }
         
         foreach (var child in node.Children)

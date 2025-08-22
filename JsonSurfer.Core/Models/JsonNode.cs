@@ -11,7 +11,7 @@ public class JsonNode : INotifyPropertyChanged
     private JsonNode? _parent;
     private int _line;
     private int _column;
-    private bool _isExpanded = true; // Default to expanded for better UX
+    private bool _isExpanded = false; // Default to collapsed for better performance
 
     public string Key 
     { 
@@ -143,6 +143,8 @@ public class JsonNode : INotifyPropertyChanged
     // Helper methods for expand/collapse operations
     public void ExpandAll()
     {
+        // Set expanded state for all nodes, regardless of having children
+        // This ensures consistent state for both parent and leaf nodes
         IsExpanded = true;
         foreach (var child in Children)
         {
@@ -152,11 +154,40 @@ public class JsonNode : INotifyPropertyChanged
 
     public void CollapseAll()
     {
+        // Set collapsed state for all nodes, regardless of having children
+        // This ensures consistent state for both parent and leaf nodes
         IsExpanded = false;
         foreach (var child in Children)
         {
             child.CollapseAll();
         }
+    }
+
+    public override string ToString()
+    {
+        var typeStr = Type switch
+        {
+            JsonNodeType.Object => "[object]",
+            JsonNodeType.Array => "[array]",
+            JsonNodeType.String => "[string]",
+            JsonNodeType.Number => "[number]",
+            JsonNodeType.Boolean => "[boolean]",
+            JsonNodeType.Null => "[null]",
+            JsonNodeType.Property => "",
+            _ => ""
+        };
+
+        if (string.IsNullOrEmpty(Key))
+        {
+            return $"{Value} {typeStr}".Trim();
+        }
+        
+        if (Value == null)
+        {
+            return $"{Key} {typeStr}".Trim();
+        }
+
+        return $"{Key}: {Value} {typeStr}".Trim();
     }
 }
 
