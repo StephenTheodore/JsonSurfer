@@ -45,9 +45,21 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private int _selectedTabIndex;
 
+    [ObservableProperty]
     // Dictionary to store node expansion states by path
     private Dictionary<string, bool> _nodeExpansionStates = new();
 
+    [ObservableProperty]
+    private bool _isUpdatingFromTree = false;
+
+    [ObservableProperty]
+    private double _zoomLevel = 1.0;
+
+    public string ZoomPercentage => $"{ZoomLevel * 100:0}%";
+    
+    // Font sizes based on zoom level (Visual Studio style)
+    public double CodeEditorFontSize => Math.Round(12 * ZoomLevel, 0); // Base: 12pt
+    public double TreeViewFontSize => Math.Round(11 * ZoomLevel, 0);   // Base: 11pt
 
     public MainViewModel(IJsonParserService jsonParserService, IValidationService validationService, IFileService fileService)
     {
@@ -100,6 +112,14 @@ public partial class MainViewModel : ObservableObject
                 return;
             }
 
+            // If we're on Visual Editor tab and have RootNode changes, 
+            // sync from tree to JSON content first
+            if (SelectedTabIndex == 1 && RootNode != null)
+            {
+                System.Diagnostics.Debug.WriteLine("Saving from Visual Editor - syncing tree to JSON");
+                UpdateTextFromVisuals();
+            }
+
             var success = await _fileService.WriteFileAsync(filePath, JsonContent);
             if (success)
             {
@@ -132,6 +152,14 @@ public partial class MainViewModel : ObservableObject
 
             if (saveFileDialog.ShowDialog() == true)
             {
+                // If we're on Visual Editor tab and have RootNode changes, 
+                // sync from tree to JSON content first
+                if (SelectedTabIndex == 1 && RootNode != null)
+                {
+                    System.Diagnostics.Debug.WriteLine("Save As from Visual Editor - syncing tree to JSON");
+                    UpdateTextFromVisuals();
+                }
+
                 var success = await _fileService.WriteFileAsync(saveFileDialog.FileName, JsonContent);
                 if (success)
                 {
@@ -190,6 +218,30 @@ public partial class MainViewModel : ObservableObject
                 MessageBox.Show($"Failed to format JSON: {ex.Message}", "Format Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
+    }
+
+    [RelayCommand]
+    private void ZoomIn()
+    {
+        if (ZoomLevel < 3.0) // Max zoom 300%
+        {
+            ZoomLevel = Math.Round(ZoomLevel + 0.1, 1);
+        }
+    }
+
+    [RelayCommand]
+    private void ZoomOut()
+    {
+        if (ZoomLevel > 0.5) // Min zoom 50%
+        {
+            ZoomLevel = Math.Round(ZoomLevel - 0.1, 1);
+        }
+    }
+
+    [RelayCommand]
+    private void ResetZoom()
+    {
+        ZoomLevel = 1.0;
     }
 
     [RelayCommand]
@@ -259,8 +311,19 @@ public partial class MainViewModel : ObservableObject
             IsModified = true;
         }
         
-        // Auto-validate on content change
-        ValidateJson();
+        // Auto-validate on content change, but skip tree rebuild if updating from tree
+        if (!_isUpdatingFromTree)
+        {
+            ValidateJson();
+        }
+        else
+        {
+            // Just validate without rebuilding tree when updating from PropertyGrid
+            if (!string.IsNullOrEmpty(JsonContent))
+            {
+                ValidationResult = _jsonParserService.ValidateJsonWithAutoFix(JsonContent);
+            }
+        }
     }
 
     // Handle validation result changes to update problems list
@@ -269,6 +332,31 @@ public partial class MainViewModel : ObservableObject
         UpdateAllProblems();
     }
 
+    // Handle zoom level changes to update percentage display and font sizes
+    partial void OnZoomLevelChanged(double value)
+    {
+        OnPropertyChanged(nameof(ZoomPercentage));
+        OnPropertyChanged(nameof(CodeEditorFontSize));
+        OnPropertyChanged(nameof(TreeViewFontSize));
+    }
+
+    // Handle tab changes through property change notification
+    partial void OnSelectedTabIndexChanged(int value)
+    {
+        System.Diagnostics.Debug.WriteLine($"Tab changed to index: {value}");
+        
+        // 0 = Code Editor, 1 = Visual Editor
+        if (value == 0) // Code Editor selected
+        {
+            System.Diagnostics.Debug.WriteLine("Switching to Code Editor - UpdateTextFromVisuals");
+            UpdateTextFromVisuals();
+        }
+        else if (value == 1) // Visual Editor selected  
+        {
+            System.Diagnostics.Debug.WriteLine("Switching to Visual Editor - UpdateVisualsFromText");
+            UpdateVisualsFromText();
+        }
+    }
 
     private void UpdateAllProblems()
     {
@@ -298,6 +386,28 @@ public partial class MainViewModel : ObservableObject
         }
 
         AllProblems = problems;
+    }
+
+    // Public method for PropertyGrid to update JSON content without rebuilding tree
+    public void UpdateJsonContentFromTree()
+    {
+        if (RootNode != null)
+        {
+            try
+            {
+                _isUpdatingFromTree = true;
+                JsonContent = _jsonParserService.SerializeFromTree(RootNode);
+                System.Diagnostics.Debug.WriteLine("JSON content updated from tree without validation");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to serialize tree: {ex.Message}");
+            }
+            finally
+            {
+                _isUpdatingFromTree = false;
+            }
+        }
     }
 
     // Added these methods for bidirectional synchronization

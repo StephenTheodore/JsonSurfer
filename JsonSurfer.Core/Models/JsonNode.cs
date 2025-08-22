@@ -139,7 +139,7 @@ public class JsonNode : INotifyPropertyChanged
     {
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
-
+    
     // Helper methods for expand/collapse operations
     public void ExpandAll()
     {

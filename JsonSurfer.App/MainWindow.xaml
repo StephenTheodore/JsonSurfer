@@ -28,6 +28,30 @@
             Key="F"
             Command="{Binding FormatJsonCommand}"
             Modifiers="Ctrl+Shift" />
+        <KeyBinding
+            Key="OemPlus"
+            Command="{Binding ZoomInCommand}"
+            Modifiers="Ctrl" />
+        <KeyBinding
+            Key="Add"
+            Command="{Binding ZoomInCommand}"
+            Modifiers="Ctrl" />
+        <KeyBinding
+            Key="OemMinus"
+            Command="{Binding ZoomOutCommand}"
+            Modifiers="Ctrl" />
+        <KeyBinding
+            Key="Subtract"
+            Command="{Binding ZoomOutCommand}"
+            Modifiers="Ctrl" />
+        <KeyBinding
+            Key="D0"
+            Command="{Binding ResetZoomCommand}"
+            Modifiers="Ctrl" />
+        <KeyBinding
+            Key="NumPad0"
+            Command="{Binding ResetZoomCommand}"
+            Modifiers="Ctrl" />
     </Window.InputBindings>
 
     <Grid>
@@ -67,6 +91,20 @@
                         Header="_Format/Beautify JSON"
                         InputGestureText="Ctrl+Shift+F" />
                 </MenuItem>
+                <MenuItem Header="_View">
+                    <MenuItem
+                        Command="{Binding ZoomInCommand}"
+                        Header="Zoom _In"
+                        InputGestureText="Ctrl++" />
+                    <MenuItem
+                        Command="{Binding ZoomOutCommand}"
+                        Header="Zoom _Out"
+                        InputGestureText="Ctrl+-" />
+                    <MenuItem
+                        Command="{Binding ResetZoomCommand}"
+                        Header="_Reset Zoom"
+                        InputGestureText="Ctrl+0" />
+                </MenuItem>
             </Menu>
         </DockPanel>
 
@@ -91,7 +129,8 @@
                     <controls:JsonTreeView Grid.Column="0" DataContext="{Binding}" />
                     <GridSplitter Grid.Column="1" HorizontalAlignment="Stretch" />
                     <Grid Grid.Column="2">
-                        <xctk:PropertyGrid SelectedObject="{Binding SelectedNode}" />
+                        <xctk:PropertyGrid SelectedObject="{Binding SelectedNode}" 
+                                          PropertyValueChanged="PropertyGrid_PropertyValueChanged" />
                     </Grid>
                 </Grid>
             </TabItem>
@@ -141,7 +180,7 @@
                                      Text="{Binding LeftFormattedContent, Mode=OneWay}" 
                                      IsReadOnly="True" 
                                      FontFamily="Consolas" 
-                                     FontSize="12"
+                                     FontSize="{Binding DataContext.CodeEditorFontSize, RelativeSource={RelativeSource AncestorType=Window}}"
                                      TextWrapping="NoWrap"
                                      ScrollViewer.HorizontalScrollBarVisibility="Auto"
                                      ScrollViewer.VerticalScrollBarVisibility="Auto"
@@ -168,7 +207,7 @@
                                      Text="{Binding RightFormattedContent, Mode=OneWay}" 
                                      IsReadOnly="True" 
                                      FontFamily="Consolas" 
-                                     FontSize="12"
+                                     FontSize="{Binding DataContext.CodeEditorFontSize, RelativeSource={RelativeSource AncestorType=Window}}"
                                      TextWrapping="NoWrap"
                                      ScrollViewer.HorizontalScrollBarVisibility="Auto"
                                      ScrollViewer.VerticalScrollBarVisibility="Auto"
@@ -393,6 +432,14 @@
         <StatusBar Grid.Row="4">
             <StatusBarItem>
                 <TextBlock Text="{Binding IsModified, StringFormat='FileModified : {0}'}" />
+            </StatusBarItem>
+            <StatusBarItem HorizontalAlignment="Right">
+                <StackPanel Orientation="Horizontal">
+                    <Button Content="−" Command="{Binding ZoomOutCommand}" Margin="2,0" Padding="5,0" FontSize="14" />
+                    <TextBlock Text="{Binding ZoomPercentage}" VerticalAlignment="Center" Margin="5,0" FontWeight="Bold" />
+                    <Button Content="+" Command="{Binding ZoomInCommand}" Margin="2,0" Padding="5,0" FontSize="14" />
+                    <Button Content="Reset" Command="{Binding ResetZoomCommand}" Margin="5,0,0,0" Padding="5,0" FontSize="11" />
+                </StackPanel>
             </StatusBarItem>
         </StatusBar>
     </Grid>
