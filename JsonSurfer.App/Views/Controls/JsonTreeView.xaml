@@ -27,6 +27,7 @@
                 <Style TargetType="TreeViewItem">
                     <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
                     <Setter Property="FontSize" Value="{Binding DataContext.TreeViewFontSize, RelativeSource={RelativeSource AncestorType=UserControl}, FallbackValue=11}" />
+                    <Setter Property="ItemsSource" Value="{Binding Children}" />
                 </Style>
             </TreeView.ItemContainerStyle>
         </TreeView>
