@@ -46,6 +46,9 @@ public partial class MainViewModel : ObservableObject
     private int _selectedTabIndex;
 
     [ObservableProperty]
+    private bool _isUpdatingFromTree = false;
+
+    [ObservableProperty]
     private double _zoomLevel = 1.0;
 
     public string ZoomPercentage => $"{ZoomLevel * 100:0}%";
@@ -106,6 +109,14 @@ public partial class MainViewModel : ObservableObject
                 return;
             }
 
+            // If we're on Visual Editor tab and have RootNode changes, 
+            // sync from tree to JSON content first
+            if (SelectedTabIndex == 1 && RootNode != null)
+            {
+                System.Diagnostics.Debug.WriteLine("Saving from Visual Editor - syncing tree to JSON");
+                UpdateTextFromVisuals();
+            }
+
             var success = await _fileService.WriteFileAsync(filePath, JsonContent);
             if (success)
             {
@@ -138,6 +149,14 @@ public partial class MainViewModel : ObservableObject
 
             if (saveFileDialog.ShowDialog() == true)
             {
+                // If we're on Visual Editor tab and have RootNode changes, 
+                // sync from tree to JSON content first
+                if (SelectedTabIndex == 1 && RootNode != null)
+                {
+                    System.Diagnostics.Debug.WriteLine("Save As from Visual Editor - syncing tree to JSON");
+                    UpdateTextFromVisuals();
+                }
+
                 var success = await _fileService.WriteFileAsync(saveFileDialog.FileName, JsonContent);
                 if (success)
                 {
@@ -266,8 +285,19 @@ public partial class MainViewModel : ObservableObject
             IsModified = true;
         }
         
-        // Auto-validate on content change
-        ValidateJson();
+        // Auto-validate on content change, but skip tree rebuild if updating from tree
+        if (!_isUpdatingFromTree)
+        {
+            ValidateJson();
+        }
+        else
+        {
+            // Just validate without rebuilding tree when updating from PropertyGrid
+            if (!string.IsNullOrEmpty(JsonContent))
+            {
+                ValidationResult = _jsonParserService.ValidateJsonWithAutoFix(JsonContent);
+            }
+        }
     }
 
     // Handle validation result changes to update problems list
@@ -330,6 +360,28 @@ public partial class MainViewModel : ObservableObject
         }
 
         AllProblems = problems;
+    }
+
+    // Public method for PropertyGrid to update JSON content without rebuilding tree
+    public void UpdateJsonContentFromTree()
+    {
+        if (RootNode != null)
+        {
+            try
+            {
+                _isUpdatingFromTree = true;
+                JsonContent = _jsonParserService.SerializeFromTree(RootNode);
+                System.Diagnostics.Debug.WriteLine("JSON content updated from tree without validation");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to serialize tree: {ex.Message}");
+            }
+            finally
+            {
+                _isUpdatingFromTree = false;
+            }
+        }
     }
 
     // Added these methods for bidirectional synchronization
