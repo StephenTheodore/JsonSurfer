@@ -8,16 +8,32 @@ namespace JsonSurfer.Core.Services;
 
 public class JsonParserService : IJsonParserService
 {
-    public JsonNode? ParseToTree(string jsonContent)
+    public ParseResult ParseToTree(string jsonContent)
     {
         try
         {
             var document = JsonDocument.Parse(jsonContent);
-            return ParseElement(document.RootElement, null, string.Empty);
+            var rootNode = ParseElement(document.RootElement, null, string.Empty);
+            
+            return new ParseResult
+            {
+                IsSuccess = true,
+                RootNode = rootNode,
+                ErrorMessage = string.Empty,
+                LineNumber = 0,
+                ColumnNumber = 0
+            };
         }
-        catch (JsonException)
+        catch (JsonException ex)
         {
-            return null;
+            return new ParseResult
+            {
+                IsSuccess = false,
+                RootNode = null,
+                ErrorMessage = ex.Message,
+                LineNumber = ex.LineNumber ?? 0,
+                ColumnNumber = ex.BytePositionInLine ?? 0
+            };
         }
     }
 
@@ -165,7 +181,7 @@ public class JsonParserService : IJsonParserService
         try
         {
             var content = await File.ReadAllTextAsync(filePath);
-            return ParseToTree(content);
+            return ParseToTree(content).RootNode;
         }
         catch
         {

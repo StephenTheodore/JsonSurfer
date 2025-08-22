@@ -4,7 +4,7 @@ namespace JsonSurfer.Core.Interfaces;
 
 public interface IJsonParserService
 {
-    JsonNode? ParseToTree(string jsonContent);
+    ParseResult ParseToTree(string jsonContent);
     string SerializeFromTree(JsonNode rootNode);
     ValidationResult ValidateJson(string jsonContent);
     ValidationResult ValidateJsonWithAutoFix(string jsonContent);
