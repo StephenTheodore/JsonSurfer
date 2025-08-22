@@ -312,7 +312,7 @@ public partial class MainViewModel : ObservableObject
         }
         
         // Auto-validate on content change, but skip tree rebuild if updating from tree
-        if (!_isUpdatingFromTree)
+        if (!IsUpdatingFromTree)
         {
             ValidateJson();
         }
@@ -344,6 +344,12 @@ public partial class MainViewModel : ObservableObject
     partial void OnSelectedTabIndexChanged(int value)
     {
         System.Diagnostics.Debug.WriteLine($"Tab changed to index: {value}");
+        
+        // Save expansion states when leaving Visual Editor tab
+        if (_selectedTabIndex == 1 && value != 1) // Leaving Visual Editor
+        {
+            SaveNodeExpansionStates();
+        }
         
         // 0 = Code Editor, 1 = Visual Editor
         if (value == 0) // Code Editor selected
@@ -395,7 +401,7 @@ public partial class MainViewModel : ObservableObject
         {
             try
             {
-                _isUpdatingFromTree = true;
+                IsUpdatingFromTree = true;
                 JsonContent = _jsonParserService.SerializeFromTree(RootNode);
                 System.Diagnostics.Debug.WriteLine("JSON content updated from tree without validation");
             }
@@ -405,7 +411,7 @@ public partial class MainViewModel : ObservableObject
             }
             finally
             {
-                _isUpdatingFromTree = false;
+                IsUpdatingFromTree = false;
             }
         }
     }
@@ -492,7 +498,7 @@ public partial class MainViewModel : ObservableObject
     // Node expansion state management methods
     private void SaveNodeExpansionStates()
     {
-        _nodeExpansionStates.Clear();
+        NodeExpansionStates.Clear();
         if (RootNode != null)
         {
             SaveNodeExpansionStatesRecursive(RootNode);
@@ -503,7 +509,7 @@ public partial class MainViewModel : ObservableObject
     {
         if (!string.IsNullOrEmpty(node.NodePath))
         {
-            _nodeExpansionStates[node.NodePath] = node.IsExpanded;
+            NodeExpansionStates[node.NodePath] = node.IsExpanded;
         }
         
         foreach (var child in node.Children)
@@ -514,7 +520,7 @@ public partial class MainViewModel : ObservableObject
 
     private void RestoreNodeExpansionStates()
     {
-        if (RootNode != null && _nodeExpansionStates.Count > 0)
+        if (RootNode != null && NodeExpansionStates.Count > 0)
         {
             RestoreNodeExpansionStatesRecursive(RootNode);
         }
@@ -522,9 +528,9 @@ public partial class MainViewModel : ObservableObject
 
     private void RestoreNodeExpansionStatesRecursive(JsonNode node)
     {
-        if (!string.IsNullOrEmpty(node.NodePath) && _nodeExpansionStates.ContainsKey(node.NodePath))
+        if (!string.IsNullOrEmpty(node.NodePath) && NodeExpansionStates.ContainsKey(node.NodePath))
         {
-            node.IsExpanded = _nodeExpansionStates[node.NodePath];
+            node.IsExpanded = NodeExpansionStates[node.NodePath];
         }
         
         foreach (var child in node.Children)
@@ -533,27 +539,62 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
-    // Save expansion states when switching from Visual Editor tab
-    partial void OnSelectedTabIndexChanged(int value)
+    #region Drag & Drop Support
+
+    [RelayCommand]
+    public async Task HandleFileDrop(string[] files)
     {
-        System.Diagnostics.Debug.WriteLine($"Tab changed to index: {value}");
+        if (files == null || files.Length == 0) return;
         
-        // Save expansion states when leaving Visual Editor tab
-        if (_selectedTabIndex == 1 && value != 1) // Leaving Visual Editor
+        var jsonFile = files.FirstOrDefault(IsValidJsonFile);
+        if (jsonFile != null)
         {
-            SaveNodeExpansionStates();
-        }
-        
-        // 0 = Code Editor, 1 = Visual Editor
-        if (value == 0) // Code Editor selected
-        {
-            System.Diagnostics.Debug.WriteLine("Switching to Code Editor - UpdateTextFromVisuals");
-            UpdateTextFromVisuals();
-        }
-        else if (value == 1) // Visual Editor selected  
-        {
-            System.Diagnostics.Debug.WriteLine("Switching to Visual Editor - UpdateVisualsFromText");
-            UpdateVisualsFromText();
+            await LoadFileFromPath(jsonFile);
         }
     }
+
+    [RelayCommand]
+    public void HandlePropertyValueChanged()
+    {
+        IsModified = true;
+        UpdateJsonContentFromTree();
+    }
+
+    private async Task LoadFileFromPath(string filePath)
+    {
+        try
+        {
+            var content = await System.IO.File.ReadAllTextAsync(filePath);
+            
+            JsonContent = content;
+            CurrentFilePath = filePath;
+            WindowTitle = $"JsonSurfer - {System.IO.Path.GetFileName(filePath)}";
+            IsModified = false;
+            
+            ValidateJsonCommand.Execute(null);
+            SelectedTabIndex = 0; // Switch to Code Editor tab
+        }
+        catch (Exception ex)
+        {
+            System.Windows.MessageBox.Show($"Failed to load file: {ex.Message}", "File Load Error", 
+                System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+        }
+    }
+
+    public static bool IsValidJsonFile(string filePath)
+    {
+        if (string.IsNullOrEmpty(filePath) || !System.IO.File.Exists(filePath))
+            return false;
+            
+        var extension = System.IO.Path.GetExtension(filePath).ToLowerInvariant();
+        return extension == ".json" || extension == ".info";
+    }
+
+    public bool CanAcceptFiles(string[] files)
+    {
+        return files?.Any(IsValidJsonFile) == true;
+    }
+
+    #endregion
+
 }
