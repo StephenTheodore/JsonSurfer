@@ -26,14 +26,6 @@ public partial class MainWindow : Window
         // Get CompareViewModel from DI
         _compareViewModel = serviceProvider.GetRequiredService<CompareViewModel>();
         
-        // Setup drag and drop event handlers
-        Drop += MainWindow_Drop;
-        
-        // Setup mouse wheel event handler for zoom
-        PreviewMouseWheel += MainWindow_PreviewMouseWheel;
-        DragEnter += MainWindow_DragEnter;
-        DragOver += MainWindow_DragOver;
-        
         // Set Compare tab DataContext
         Loaded += MainWindow_Loaded;
     }
@@ -112,7 +104,7 @@ public partial class MainWindow : Window
         if (e.Data.GetDataPresent(DataFormats.FileDrop))
         {
             string[] files = (string[])e.Data.GetData(DataFormats.FileDrop);
-            e.Effects = files.Any(IsValidJsonFile) ? DragDropEffects.Copy : DragDropEffects.None;
+            e.Effects = files.Any(MainViewModel.IsValidJsonFile) ? DragDropEffects.Copy : DragDropEffects.None;
         }
         else
         {
@@ -126,7 +118,7 @@ public partial class MainWindow : Window
         if (e.Data.GetDataPresent(DataFormats.FileDrop))
         {
             string[] files = (string[])e.Data.GetData(DataFormats.FileDrop);
-            return files.FirstOrDefault(IsValidJsonFile);
+            return files.FirstOrDefault(MainViewModel.IsValidJsonFile);
         }
         return null;
     }
@@ -263,111 +255,4 @@ public partial class MainWindow : Window
         return null;
     }
 
-    private void MainWindow_DragEnter(object sender, DragEventArgs e)
-    {
-        // Check if the data object contains file list
-        if (e.Data.GetDataPresent(DataFormats.FileDrop))
-        {
-            string[] files = (string[])e.Data.GetData(DataFormats.FileDrop);
-            
-            // Check if any of the files has valid JSON extension
-            if (files.Any(file => IsValidJsonFile(file)))
-            {
-                e.Effects = DragDropEffects.Copy;
-            }
-            else
-            {
-                e.Effects = DragDropEffects.None;
-            }
-        }
-        else
-        {
-            e.Effects = DragDropEffects.None;
-        }
-        
-        e.Handled = true;
-    }
-
-    private void MainWindow_DragOver(object sender, DragEventArgs e)
-    {
-        // Same logic as DragEnter
-        MainWindow_DragEnter(sender, e);
-    }
-
-    private async void MainWindow_Drop(object sender, DragEventArgs e)
-    {
-        if (e.Data.GetDataPresent(DataFormats.FileDrop))
-        {
-            string[] files = (string[])e.Data.GetData(DataFormats.FileDrop);
-            
-            // Get the first valid JSON file
-            var jsonFile = files.FirstOrDefault(file => IsValidJsonFile(file));
-            
-            if (jsonFile != null)
-            {
-                try
-                {
-                    // Use the ViewModel's file service to read the file
-                    var content = await File.ReadAllTextAsync(jsonFile);
-                    
-                    // Update ViewModel properties
-                    _viewModel.JsonContent = content;
-                    _viewModel.CurrentFilePath = jsonFile;
-                    _viewModel.WindowTitle = $"JsonSurfer - {Path.GetFileName(jsonFile)}";
-                    _viewModel.IsModified = false;
-                    
-                    // Auto-validate the loaded JSON
-                    _viewModel.ValidateJsonCommand.Execute(null);
-                    
-                    // Switch to Code Editor tab to show the loaded content
-                    _viewModel.SelectedTabIndex = 0;
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show($"Failed to load file: {ex.Message}", "Drag & Drop Error", 
-                        MessageBoxButton.OK, MessageBoxImage.Error);
-                }
-            }
-        }
-        
-        e.Handled = true;
-    }
-
-    private static bool IsValidJsonFile(string filePath)
-    {
-        if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath))
-            return false;
-            
-        var extension = Path.GetExtension(filePath).ToLowerInvariant();
-        return extension == ".json" || extension == ".info";
-    }
-    
-    private void PropertyGrid_PropertyValueChanged(object sender, Xceed.Wpf.Toolkit.PropertyGrid.PropertyValueChangedEventArgs e)
-    {
-        // When PropertyGrid value changes, mark as modified and update JSON content ONLY
-        _viewModel.IsModified = true;
-        
-        // Update JSON content from tree without rebuilding the tree (prevents collapse)
-        _viewModel.UpdateJsonContentFromTree();
-        
-        System.Diagnostics.Debug.WriteLine($"PropertyGrid value changed: {e.OldValue} -> {e.NewValue}");
-
-    private void MainWindow_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
-    {
-        if (Keyboard.Modifiers == ModifierKeys.Control)
-        {
-            e.Handled = true;
-            
-            if (e.Delta > 0)
-            {
-                // Scroll up - zoom in
-                _viewModel.ZoomInCommand.Execute(null);
-            }
-            else
-            {
-                // Scroll down - zoom out
-                _viewModel.ZoomOutCommand.Execute(null);
-            }
-        }
-    }
 }
