@@ -28,6 +28,9 @@ public partial class MainWindow : Window
         
         // Setup drag and drop event handlers
         Drop += MainWindow_Drop;
+        
+        // Setup mouse wheel event handler for zoom
+        PreviewMouseWheel += MainWindow_PreviewMouseWheel;
         DragEnter += MainWindow_DragEnter;
         DragOver += MainWindow_DragOver;
         
@@ -338,7 +341,7 @@ public partial class MainWindow : Window
         var extension = Path.GetExtension(filePath).ToLowerInvariant();
         return extension == ".json" || extension == ".info";
     }
-
+    
     private void PropertyGrid_PropertyValueChanged(object sender, Xceed.Wpf.Toolkit.PropertyGrid.PropertyValueChangedEventArgs e)
     {
         // When PropertyGrid value changes, mark as modified and update JSON content ONLY
@@ -348,5 +351,23 @@ public partial class MainWindow : Window
         _viewModel.UpdateJsonContentFromTree();
         
         System.Diagnostics.Debug.WriteLine($"PropertyGrid value changed: {e.OldValue} -> {e.NewValue}");
+
+    private void MainWindow_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
+    {
+        if (Keyboard.Modifiers == ModifierKeys.Control)
+        {
+            e.Handled = true;
+            
+            if (e.Delta > 0)
+            {
+                // Scroll up - zoom in
+                _viewModel.ZoomInCommand.Execute(null);
+            }
+            else
+            {
+                // Scroll down - zoom out
+                _viewModel.ZoomOutCommand.Execute(null);
+            }
+        }
     }
 }

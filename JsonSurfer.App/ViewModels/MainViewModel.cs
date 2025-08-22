@@ -45,7 +45,17 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty]
     private int _selectedTabIndex;
 
+    [ObservableProperty]
     private bool _isUpdatingFromTree = false;
+
+    [ObservableProperty]
+    private double _zoomLevel = 1.0;
+
+    public string ZoomPercentage => $"{ZoomLevel * 100:0}%";
+    
+    // Font sizes based on zoom level (Visual Studio style)
+    public double CodeEditorFontSize => Math.Round(12 * ZoomLevel, 0); // Base: 12pt
+    public double TreeViewFontSize => Math.Round(11 * ZoomLevel, 0);   // Base: 11pt
 
 
     public MainViewModel(IJsonParserService jsonParserService, IValidationService validationService, IFileService fileService)
@@ -208,6 +218,30 @@ public partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private void ZoomIn()
+    {
+        if (ZoomLevel < 3.0) // Max zoom 300%
+        {
+            ZoomLevel = Math.Round(ZoomLevel + 0.1, 1);
+        }
+    }
+
+    [RelayCommand]
+    private void ZoomOut()
+    {
+        if (ZoomLevel > 0.5) // Min zoom 50%
+        {
+            ZoomLevel = Math.Round(ZoomLevel - 0.1, 1);
+        }
+    }
+
+    [RelayCommand]
+    private void ResetZoom()
+    {
+        ZoomLevel = 1.0;
+    }
+
+    [RelayCommand]
     private void ValidateJson()
     {
         if (!string.IsNullOrEmpty(JsonContent))
@@ -270,6 +304,14 @@ public partial class MainViewModel : ObservableObject
     partial void OnValidationResultChanged(ValidationResult? value)
     {
         UpdateAllProblems();
+    }
+
+    // Handle zoom level changes to update percentage display and font sizes
+    partial void OnZoomLevelChanged(double value)
+    {
+        OnPropertyChanged(nameof(ZoomPercentage));
+        OnPropertyChanged(nameof(CodeEditorFontSize));
+        OnPropertyChanged(nameof(TreeViewFontSize));
     }
 
     // Handle tab changes through property change notification
