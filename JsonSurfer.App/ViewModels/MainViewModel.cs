@@ -255,7 +255,8 @@ public partial class MainViewModel : ObservableObject
             try
             {
                 ValidationResult = _jsonParserService.ValidateJsonWithAutoFix(JsonContent);
-                RootNode = _jsonParserService.ParseToTree(JsonContent);
+                var parseResult = _jsonParserService.ParseToTree(JsonContent);
+                RootNode = parseResult.IsSuccess ? parseResult.RootNode : null;
                 
                 // Restore expansion states after parsing
                 RestoreNodeExpansionStates();
@@ -477,7 +478,8 @@ public partial class MainViewModel : ObservableObject
                 ValidationResult = _jsonParserService.ValidateJsonWithAutoFix(JsonContent);
                 if (ValidationResult.IsValid)
                 {
-                    RootNode = _jsonParserService.ParseToTree(JsonContent);
+                    var parseResult = _jsonParserService.ParseToTree(JsonContent);
+                    RootNode = parseResult.IsSuccess ? parseResult.RootNode : null;
                     
                     // Restore expansion states after updating visuals
                     RestoreNodeExpansionStates();
