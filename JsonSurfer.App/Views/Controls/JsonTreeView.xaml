@@ -30,6 +30,71 @@
                     <Setter Property="ItemsSource" Value="{Binding Children}" />
                 </Style>
             </TreeView.ItemContainerStyle>
+            <TreeView.Resources>
+                <HierarchicalDataTemplate DataType="{x:Type models:JsonNode}" ItemsSource="{Binding Children}">
+                    <StackPanel Orientation="Horizontal">
+                        <!-- Key display -->
+                        <TextBlock Text="{Binding Key, Mode=OneWay}" FontWeight="Bold" Margin="0,0,4,0">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Key}" Value="">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                        
+                        <!-- Colon separator -->
+                        <TextBlock Text=": " Margin="0,0,4,0">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Key}" Value="">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                        
+                        <!-- Value display -->
+                        <TextBlock Text="{Binding Value, Mode=OneWay}" Margin="0,0,4,0" />
+                        
+                        <!-- Type indicator -->
+                        <TextBlock Foreground="Gray" FontSize="10" FontStyle="Italic" VerticalAlignment="Center">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Type}" Value="Object">
+                                            <Setter Property="Text" Value="[object]" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding Type}" Value="Array">
+                                            <Setter Property="Text" Value="[array]" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding Type}" Value="String">
+                                            <Setter Property="Text" Value="[string]" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding Type}" Value="Number">
+                                            <Setter Property="Text" Value="[number]" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding Type}" Value="Boolean">
+                                            <Setter Property="Text" Value="[boolean]" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding Type}" Value="Null">
+                                            <Setter Property="Text" Value="[null]" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding Type}" Value="Property">
+                                            <Setter Property="Text" Value="" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </StackPanel>
+                </HierarchicalDataTemplate>
+            </TreeView.Resources>
         </TreeView>
     </Grid>
 </UserControl>

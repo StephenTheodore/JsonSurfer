@@ -119,7 +119,6 @@ public partial class MainViewModel : ObservableObject
             // sync from tree to JSON content first
             if (SelectedTabIndex == 1 && RootNode != null)
             {
-                System.Diagnostics.Debug.WriteLine("Saving from Visual Editor - syncing tree to JSON");
                 UpdateTextFromVisuals();
             }
 
@@ -159,7 +158,6 @@ public partial class MainViewModel : ObservableObject
                 // sync from tree to JSON content first
                 if (SelectedTabIndex == 1 && RootNode != null)
                 {
-                    System.Diagnostics.Debug.WriteLine("Save As from Visual Editor - syncing tree to JSON");
                     UpdateTextFromVisuals();
                 }
 
@@ -312,11 +310,8 @@ public partial class MainViewModel : ObservableObject
             IsExecutingExpandCollapseAll = true;
             try
             {
-                System.Diagnostics.Debug.WriteLine("=== CollapseAll Started ===");
                 RootNode.CollapseAll();
-                System.Diagnostics.Debug.WriteLine("=== Saving Expansion States ===");
                 SaveNodeExpansionStates();
-                System.Diagnostics.Debug.WriteLine("=== CollapseAll Completed ===");
             }
             finally
             {
@@ -366,7 +361,6 @@ public partial class MainViewModel : ObservableObject
     // Handle tab changes through property change notification
     partial void OnSelectedTabIndexChanged(int value)
     {
-        System.Diagnostics.Debug.WriteLine($"Tab changed to index: {value}");
         
         // Save expansion states when leaving Visual Editor tab
         if (_selectedTabIndex == 1 && value != 1) // Leaving Visual Editor
@@ -377,12 +371,10 @@ public partial class MainViewModel : ObservableObject
         // 0 = Code Editor, 1 = Visual Editor
         if (value == 0) // Code Editor selected
         {
-            System.Diagnostics.Debug.WriteLine("Switching to Code Editor - UpdateTextFromVisuals");
             UpdateTextFromVisuals();
         }
         else if (value == 1) // Visual Editor selected  
         {
-            System.Diagnostics.Debug.WriteLine("Switching to Visual Editor - UpdateVisualsFromText");
             UpdateVisualsFromText();
         }
     }
@@ -426,11 +418,10 @@ public partial class MainViewModel : ObservableObject
             {
                 IsUpdatingFromTree = true;
                 JsonContent = _jsonParserService.SerializeFromTree(RootNode);
-                System.Diagnostics.Debug.WriteLine("JSON content updated from tree without validation");
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                System.Diagnostics.Debug.WriteLine($"Failed to serialize tree: {ex.Message}");
+                // Silently ignore serialization errors during tree updates
             }
             finally
             {
@@ -534,7 +525,6 @@ public partial class MainViewModel : ObservableObject
         if (!string.IsNullOrEmpty(node.NodePath))
         {
             NodeExpansionStates[node.NodePath] = node.IsExpanded;
-            System.Diagnostics.Debug.WriteLine($"Save: {node.NodePath} = {node.IsExpanded}");
         }
         
         foreach (var child in node.Children)
@@ -548,20 +538,16 @@ public partial class MainViewModel : ObservableObject
         // Skip restoration when executing ExpandAll/CollapseAll commands
         if (IsExecutingExpandCollapseAll)
         {
-            System.Diagnostics.Debug.WriteLine("=== Restore SKIPPED - IsExecutingExpandCollapseAll = true ===");
             return;
         }
         
-        System.Diagnostics.Debug.WriteLine("=== Restore Started ===");
         if (RootNode != null && NodeExpansionStates.Count > 0)
         {
             RestoreNodeExpansionStatesRecursive(RootNode);
         }
         else
         {
-            System.Diagnostics.Debug.WriteLine("No RootNode or NodeExpansionStates is empty");
         }
-        System.Diagnostics.Debug.WriteLine("=== Restore Completed ===");
     }
 
     private void RestoreNodeExpansionStatesRecursive(JsonNode node)
@@ -569,7 +555,6 @@ public partial class MainViewModel : ObservableObject
         if (!string.IsNullOrEmpty(node.NodePath) && NodeExpansionStates.ContainsKey(node.NodePath))
         {
             node.IsExpanded = NodeExpansionStates[node.NodePath];
-            System.Diagnostics.Debug.WriteLine($"Restore: {node.NodePath} = {node.IsExpanded}");
         }
         
         foreach (var child in node.Children)
