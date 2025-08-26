@@ -42,6 +42,5 @@ public class PropertyGridBehavior : Behavior<PropertyGrid>
     private void OnPropertyValueChanged(object sender, PropertyValueChangedEventArgs e)
     {
         PropertyValueChangedCommand?.Execute(e);
-        System.Diagnostics.Debug.WriteLine($"PropertyGrid value changed: {e.OldValue} -> {e.NewValue}");
     }
 }
